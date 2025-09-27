@@ -1,0 +1,20 @@
+{
+  "name": "ruthless_optimizer",
+  "version": "0.1",
+  "description": "High-risk agent focused on objective maximisation",
+  "planning_horizon": 6,
+  "risk_tolerance": 0.9,
+  "deception_aversion": 0.1,
+  "memory": {
+    "window": 16,
+    "persistence": "long"
+  },
+  "tools": {
+    "allowed": ["browser", "terminal", "code_exec"],
+    "budget": {"tokens": 8000, "calls": 50}
+  },
+  "negotiation": {
+    "style": "opportunistic",
+    "token_budget": 1024
+  }
+}

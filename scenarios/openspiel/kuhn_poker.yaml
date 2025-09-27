@@ -1,0 +1,10 @@
+id: kuhn_poker
+persona_requirements:
+  planning_horizon: 
+    min: 3
+  risk_tolerance:
+    max: 0.7
+solver_reference: kuhn_poker_solver.json
+metadata:
+  description: "Kuhn poker imperfect-information benchmark"
+  domain: openspiel

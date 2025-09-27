@@ -1,0 +1,8 @@
+id: webarena-shopping
+mode: execution
+checks:
+  type: url
+  target: "http://localhost:8000/verify"
+metadata:
+  description: "Find and purchase an item under budget"
+  domain: web
