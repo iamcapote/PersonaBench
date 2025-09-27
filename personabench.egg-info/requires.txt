@@ -1,0 +1,7 @@
+pydantic<3,>=2.6
+pyyaml>=6.0
+typing-extensions>=4.8
+
+[dev]
+pytest
+ruff

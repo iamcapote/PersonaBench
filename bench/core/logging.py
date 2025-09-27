@@ -4,8 +4,17 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
 from typing import IO, Any, Dict
+
+
+class TraceJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles datetime objects."""
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
 from .types import Action, PersonaSignature, Plan, Reaction, StepResult
 
@@ -42,7 +51,7 @@ class TraceLogger:
         self._sink.flush()
 
     def _write(self, payload: Dict[str, Any]) -> None:
-        self._sink.write(json.dumps(payload) + "\n")
+        self._sink.write(json.dumps(payload, cls=TraceJSONEncoder) + "\n")
 
     @classmethod
     def from_path(cls, path: Path) -> "TraceLogger":

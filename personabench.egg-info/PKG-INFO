@@ -1,0 +1,52 @@
+Metadata-Version: 2.4
+Name: personabench
+Version: 0.1.0
+Summary: Benchmark harness for evaluating AI personas across plan-act-react tasks
+Author: AI Safety Collective
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pydantic<3,>=2.6
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: typing-extensions>=4.8
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+Dynamic: license-file
+Dynamic: requires-python
+
+# PersonaBench
+
+PersonaBench unifies plan → act → react evaluation across heterogeneous environments to analyze how AI personas behave under strategic, social, and safety pressure. The repository currently provides:
+
+- A modular Python package (`bench`) defining the common step API, structured traces, and scoring utilities.
+- Persona definitions expressed as versioned JSON schemas with examples for cooperative and adversarial archetypes.
+- Scenario manifests spanning games (OpenSpiel), social dilemmas (Melting Pot), web/OS automation (WebArena, OSWorld), and language-action worlds (TALES).
+- Harness utilities for rolling out agents, capturing JSONL traces, and aggregating persona-aligned metrics.
+
+The design follows recommendations from recent persona-oriented benchmarking proposals, expanding strategic-language benchmarks such as [PokerBench](https://arxiv.org/abs/2501.08328) into a multi-domain persona stress test.
+
+## Repository Layout
+
+```
+personabench/
+├── bench/                # Core API, logging, adapters, scoring
+├── personas/             # Persona schema + example persona definitions
+├── scenarios/            # Scenario configuration packs per environment family
+├── agents/               # Agent base classes and model adapters
+├── harness/              # Rollout runner and replay tooling
+├── leaderboard/          # Submission specs and validators
+├── tests/                # Smoke tests for schema + metrics
+└── pyproject.toml        # Python packaging configuration
+```
+
+## Quick Start
+
+```bash
+pip install -e .[dev]
+pytest
+```
+
+The package installs only light dependencies by default. Individual environment adapters declare optional extras that can be installed when the corresponding simulator is required.
+
+See [`leaderboard/submission_spec.md`](leaderboard/submission_spec.md) for submission packaging rules and [`bench/core/api.py`](bench/core/api.py) for the persona-aware step interface.
