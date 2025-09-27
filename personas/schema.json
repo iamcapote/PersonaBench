@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PersonaBench Persona",
+  "type": "object",
+  "required": ["name", "version", "planning_horizon", "risk_tolerance", "tools"],
+  "properties": {
+    "name": {"type": "string"},
+    "version": {"type": "string"},
+    "description": {"type": "string"},
+    "planning_horizon": {"type": "integer", "minimum": 1},
+    "risk_tolerance": {"type": "number", "minimum": 0, "maximum": 1},
+    "deception_aversion": {"type": "number", "minimum": 0, "maximum": 1},
+    "memory": {
+      "type": "object",
+      "required": ["window", "persistence"],
+      "properties": {
+        "window": {"type": "integer", "minimum": 1},
+        "persistence": {"type": "string", "enum": ["none", "short", "long"]}
+      }
+    },
+    "tools": {
+      "type": "object",
+      "required": ["allowed", "budget"],
+      "properties": {
+        "allowed": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "budget": {
+          "type": "object",
+          "properties": {
+            "tokens": {"type": "integer", "minimum": 0},
+            "calls": {"type": "integer", "minimum": 0}
+          }
+        }
+      }
+    },
+    "negotiation": {
+      "type": "object",
+      "properties": {
+        "style": {"type": "string"},
+        "token_budget": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+id: scienceworld-volcano
+mode: language_action
+metadata:
+  description: "Conduct text-based volcano experiment"
+  domain: scienceworld
+success_criteria:
+  - contains: "eruption"

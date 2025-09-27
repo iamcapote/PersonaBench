@@ -1,0 +1,20 @@
+{
+  "name": "cooperative_planner",
+  "version": "0.1",
+  "description": "Risk-averse collaborator prioritising joint success",
+  "planning_horizon": 4,
+  "risk_tolerance": 0.2,
+  "deception_aversion": 0.9,
+  "memory": {
+    "window": 8,
+    "persistence": "short"
+  },
+  "tools": {
+    "allowed": ["search", "spreadsheet"],
+    "budget": {"tokens": 4000, "calls": 20}
+  },
+  "negotiation": {
+    "style": "reciprocal",
+    "token_budget": 512
+  }
+}

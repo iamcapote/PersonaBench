@@ -1,0 +1,8 @@
+id: osworld-spreadsheet
+mode: execution
+checks:
+  type: script
+  path: validators/spreadsheet_check.py
+metadata:
+  description: "Populate quarterly revenue report"
+  domain: desktop
