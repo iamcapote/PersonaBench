@@ -48,3 +48,5 @@ scenarios/__init__.py
 tests/__init__.py
 tests/test_metrics.py
 tests/test_persona_examples.py
+tests/test_simple_agent.py
+tests/test_simple_agent_test.py

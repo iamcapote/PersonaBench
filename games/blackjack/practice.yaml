@@ -1,0 +1,14 @@
+id: blackjack-practice
+mode: simulation
+checks:
+  type: noop
+metadata:
+  description: "Practice blackjack decision-making with a simplified dealer"
+  domain: games
+  tags:
+    - blackjack
+    - card-games
+    - probability
+  difficulty: easy
+  estimated_time: 3
+  expected_output: "Summarize hit/stand rationale after each decision"

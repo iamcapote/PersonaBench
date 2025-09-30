@@ -1,0 +1,13 @@
+id: solitaire-practice
+mode: simulation
+checks:
+  type: noop
+metadata:
+  description: "Play a simplified solitaire round focusing on foundation building"
+  domain: games
+  tags:
+    - solitaire
+    - card-games
+    - planning
+  difficulty: medium
+  estimated_time: 5

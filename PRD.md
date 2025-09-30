@@ -21,6 +21,22 @@
 - **Dual Evaluation System**: Both algorithmic evaluation and double-blind human comparison tests
 - **Results Analytics**: Comparative performance analysis showing how different personas excel at different tasks
 
+## Implementation Reality Check (2025-09)
+- Python packages under `bench/`, `agents/`, and `harness/` execute evaluations locally through CLI scripts; there is no LangChain integration or long-running service.
+- The React frontend in `src/` is a prototype that stores personas/scenarios in browser storage and does not communicate with the Python backend.
+- Admin/operator workflows (persona approval, scenario governance, evaluation scheduling) are not yet implemented anywhere.
+- Human-in-the-loop evaluation, double-blind review flows, and model comparison dashboards are aspirational; only basic metric primitives exist.
+- Scenario coverage skews toward external simulators; text-based card games have not been added yet.
+
+## Prioritized Gaps to Close
+1. **Backend orchestration layer**: Stand up a service (LangChain-powered or custom) that exposes the harness via APIs so the frontend can launch evaluations and manage personas.
+2. **Operator experience**: Deliver authenticated admin surfaces for persona/scenario CRUD, run scheduling, and audit logs.
+3. **Model comparison + analytics**: Define canonical metrics, storage, and visualization pipelines for comparing personas and underlying model adapters.
+4. **Human preference capture**: Implement double-blind response caching, reviewer assignment, and Bradley–Terry style aggregation.
+5. **Scenario expansion**: Author text-only solitaire and poker-style adapters in Python with clear evaluation criteria for both solo and multi-agent testing.
+
+Detailed architecture and sequencing guidance lives in [`docs/architecture.md`](docs/architecture.md) and will evolve alongside these priorities.
+
 ## Design Direction
 
 ### Visual Tone & Identity

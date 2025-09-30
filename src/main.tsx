@@ -1,10 +1,8 @@
 import { createRoot } from 'react-dom/client'
 import { ErrorBoundary } from "react-error-boundary";
 import { Toaster } from "sonner";
-import "@github/spark/spark"
-
-import App from './App.tsx'
-import { ErrorFallback } from './ErrorFallback.tsx'
+import App from './App'
+import { ErrorFallback } from './ErrorFallback'
 
 import "./main.css"
 import "./styles/theme.css"

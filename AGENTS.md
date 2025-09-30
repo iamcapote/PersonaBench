@@ -1,6 +1,6 @@
 # PersonaBench Agents
 
-Guide for implementing, extending, and evaluating persona-based agents in PersonaBench. This document outlines core patterns and best practices for building agents that can be evaluated across diverse environments through our plan→act→react protocol.
+Guide for implementing, extending, and evaluating persona-based agents in PersonaBench. This document outlines core patterns and best practices for building agents that can be evaluated across diverse environments through our plan→act→react protocol. For a product-level view of backend/frontend integration status and upcoming infrastructure work, see [`docs/architecture.md`](docs/architecture.md).
 
 ## Agent Architecture
 

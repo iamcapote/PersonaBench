@@ -5,39 +5,47 @@ This plan outlines actionable next steps for developing and improving PersonaBen
 
 ## Immediate Priorities
 
-### 1. Integrate LangChain for Backend Operations
-- **Objective**: Use LangChain to manage backend operations, including tool management and scenario handling.
+### 1. Orchestration & Service Layer (LangChain)
+- **Objective**: Expose the existing harness through a LangChain-powered service interface that the frontend (and external clients) can call.
 - **Tasks**:
-  - Add LangChain as a dependency in the project.
-  - Integrate LangChain into the `bench` module for tool management and scenario handling.
-  - Ensure compatibility with existing APIs and utilities.
+  - Add LangChain + FastAPI dependencies to the Python package (update `pyproject.toml`).
+  - Implement LangChain `Runnable` wrappers around persona agents and environment adapters.
+  - Scaffold `/api/personas`, `/api/scenarios`, `/api/evaluations` endpoints that invoke LangChain chains and stream trace logs.
 
-### 2. Implement Tool Budget Management
-- **Objective**: Create a `ToolBudget` module to track and enforce tool usage limits.
+### 2. Admin & Operator Experience
+- **Objective**: Deliver authenticated UI and APIs for managing personas, scenarios, and evaluation runs.
 - **Tasks**:
-  - Define the `ToolBudget` class in `agents/tool_budget.py`.
-  - Implement methods for budget tracking, validation, and enforcement.
-  - Write unit tests to ensure functionality.
+  - Implement persona/scenario CRUD endpoints with schema validation and versioning metadata.
+  - Update the React app with admin tabs for library, queue, and audit logs; migrate persistence from client-only storage to service calls.
+  - Document workflow roles (operator, reviewer) and authorization requirements.
 
-### 3. Enhance Logging and Observability
-- **Objective**: Improve `TraceLogger` to capture complete plan→act→react cycles.
+### 3. Double-Blind Feedback Pipeline
+- **Objective**: Capture human preference data by presenting cached persona responses side-by-side.
 - **Tasks**:
-  - Add structured logging for tool usage and persona signature validation.
-  - Ensure logs are JSONL-formatted and include all relevant metadata.
-  - Write tests to validate logging behavior.
+  - Persist evaluation responses in a queryable store (e.g., Postgres, DuckDB, s3-backed JSONL).
+  - Build pairing logic + APIs for retrieving anonymized `A/B` comparisons.
+  - Create reviewer UI flow, storage for votes, and Bradley–Terry aggregation job.
 
-### 4. Harden Adapters
-- **Objective**: Improve robustness of OpenAI, Ollama, and vLLM adapters.
+### 4. Model Comparison Analytics
+- **Objective**: Provide meaningful persona + adapter comparisons across new metric families.
 - **Tasks**:
-  - Add retry and rate-limiting mechanisms.
-  - Write integration tests for adapter behavior under failure scenarios.
+  - Extend `bench/eval/metrics.py` with expected value, cooperation rate, red flag rate, and volatility penalties.
+  - Persist metrics in structured tables and expose comparison endpoints.
+  - Enhance frontend dashboards with heatmaps/radar charts and regression alerts.
 
-### 5. Expand Test Coverage
-- **Objective**: Ensure all core components are thoroughly tested.
+### 5. Text-Based Scenario Suite
+- **Objective**: Introduce lightweight card/negotiation games that run entirely in Python.
 - **Tasks**:
-  - Add smoke tests for new personas and scenarios.
-  - Validate persona JSON schemas against `schema.json`.
-  - Test plan→act→react behavior for edge cases.
+  - Implement solitaire and heads-up poker adapters under `bench/adapters/` with deterministic seeds.
+  - Add manifests under `scenarios/` and corresponding tests.
+  - Document scenario playbooks in `docs/scenarios/`.
+
+### 6. Enhance Logging and Observability
+- **Objective**: Improve `TraceLogger` and surrounding tooling to support service deployment.
+- **Tasks**:
+  - Add run IDs, persona/scenario metadata, and tool usage summaries to logs.
+  - Emit structured events suitable for both local debugging and centralized logging.
+  - Write tests to validate logging behavior end-to-end.
 
 ## Current State of the App
 - 📝 Schema validation: Working
@@ -45,6 +53,8 @@ This plan outlines actionable next steps for developing and improving PersonaBen
 - 💾 Memory system: Not implemented (scenarios inherently need a form of memory).
 - 🔧 Tool management: Partially implemented
 - 📊 Metrics: Basic implementation
+- 🌐 Service layer: Not implemented (frontend is standalone prototype)
+- 🧑‍🔬 Human feedback: Not implemented (requires double-blind pipeline)
 
 ## Long-Term Goals
 

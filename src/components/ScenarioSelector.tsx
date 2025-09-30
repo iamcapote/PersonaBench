@@ -1,3 +1,4 @@
+import { MouseEvent } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -19,6 +20,8 @@ interface ScenarioData {
     type: 'algorithmic' | 'human' | 'both'
   }>
   tags?: string[]
+  kind?: 'scenario' | 'game'
+  family?: string
 }
 
 interface ScenarioSelectorProps {
@@ -63,13 +66,15 @@ export function ScenarioSelector({
   showTransparency = false 
 }: ScenarioSelectorProps) {
   const selectedScenarioData = scenarios.find(s => s.id === selectedScenario)
+  const scenarioCount = scenarios.filter(s => s.kind !== 'game').length
+  const gameCount = scenarios.filter(s => s.kind === 'game').length
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Test Scenarios</h3>
+        <h3 className="text-lg font-semibold">Scenarios & Games</h3>
         <Badge variant="outline" className="text-xs">
-          {scenarios.length} scenarios available
+          {scenarioCount} scenarios · {gameCount} games
         </Badge>
       </div>
 
@@ -97,11 +102,11 @@ export function ScenarioSelector({
                       </CardDescription>
                     </div>
                   </div>
-                  {onEdit && (
+                  {onEdit && scenario.kind !== 'game' && (
                     <Button 
                       variant="ghost" 
                       size="sm"
-                      onClick={(e) => {
+                      onClick={(e: MouseEvent<HTMLButtonElement>) => {
                         e.stopPropagation()
                         onEdit(scenario.id)
                       }}
@@ -127,6 +132,16 @@ export function ScenarioSelector({
                     >
                       {scenario.difficulty}
                     </Badge>
+                    {scenario.kind === 'game' && (
+                      <Badge variant="secondary" className="text-xs">
+                        Game
+                      </Badge>
+                    )}
+                    {scenario.kind === 'game' && scenario.family && (
+                      <Badge variant="outline" className="text-xs">
+                        {scenario.family}
+                      </Badge>
+                    )}
                   </div>
                   <span className="text-xs text-muted-foreground font-mono">
                     ~{scenario.estimatedTime}min
