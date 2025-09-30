@@ -92,7 +92,7 @@ All new metrics must map to persona/scenario IDs and support aggregation.
 
 - Purpose: evaluate reactionary behaviours—coordination under fog of war, narrative decision-making, resource management—inside rich D&D-style systems.
 - Source of truth: [`dnd.md`](../dnd.md) outlines the PersonaBench D&D simulation spec covering character sheets, GM engine, scoring, and governance.
-- Implementation: scenario manifests in `scenarios/` pair environment adapters (e.g., Melting Pot, OSWorld) with the new D&D routers to capture emergent interactions.
+- Implementation: scenario manifests in `scenarios/` pair environment adapters (e.g., Melting Pot, OSWorld) with the new D&D routers to capture emergent interactions. Refer to the [`docs/scenarios/playbooks.md`](./scenarios/playbooks.md) index for detailed episode flows and operator guidance across text-first drills.
 - Distinction: games are **complicated** systems (predictable, rule-bound), while scenarios are **complex** systems (multi-layer feedback, emergent outcomes). Metrics must reflect this by combining deterministic leaderboards for games with run-by-run narrative analytics for scenarios.
 
 ## Scenario Authoring Improvements

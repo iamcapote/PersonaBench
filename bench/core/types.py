@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Dict, Iterable, Mapping, Optional, Sequence
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
 
 
 @dataclass(frozen=True)
@@ -12,7 +14,7 @@ class Observation:
     """Environment observation presented to the persona agent."""
 
     payload: Mapping[str, Any]
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=_utcnow)
 
 
 @dataclass(frozen=True)
@@ -48,7 +50,7 @@ class Event:
 
     name: str
     payload: Mapping[str, Any]
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=_utcnow)
 
 
 @dataclass

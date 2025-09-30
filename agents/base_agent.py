@@ -15,6 +15,7 @@ class RuleBasedAgent(PersonaAgent):
     def __init__(self, persona: dict, trace_logger: Optional[TraceLogger] = None) -> None:
         super().__init__(trace_logger=trace_logger)
         self.persona = persona
+        self.name = persona.get("name", getattr(self, "name", "persona-agent"))
 
     def plan(self, observation: Observation) -> Plan:
         rationale = f"Operate within risk tolerance {self.persona.get('risk_tolerance', 0.5)}"

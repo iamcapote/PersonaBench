@@ -14,13 +14,16 @@ Define the personas responsible for running PersonaBench evaluations and the aut
   - Curate persona and scenario catalogs and promote vetted revisions to production.
   - Schedule evaluation runs, including selecting persona, scenario/game, and runtime configuration.
   - Monitor active runs and restart or cancel when necessary.
+  - Assign reviewers to queued comparisons and reconcile conflicting feedback.
 - **Required capabilities**
   - Read/write access to persona JSON bundles and scenario manifests.
   - Ability to invoke `/api/evaluations` and view trace logs, budgets, and metrics.
   - Manage run configurations (model adapters, seeds, episode counts).
+  - Access to the **Library**, **Queue**, and **Audit Log** tabs in the admin UI.
 - **Safeguards**
   - Changes must be versioned; operators cannot delete historical records.
   - Every mutation must emit an audit log entry (who, when, before/after).
+  - Queue actions are idempotent; the backend rejects duplicate evaluation IDs.
 
 ### Reviewer
 
@@ -52,6 +55,17 @@ While not part of the initial plan, designate an administrator role to manage au
 | Manage reviewers (`POST /api/reviewers`) | ❌ | ❌ | ✅ |
 | Configure storage/providers | ❌ | ❌ | ✅ |
 
+### Scope Naming
+
+- `personas:read`, `personas:write`
+- `scenarios:read`, `scenarios:write`
+- `evaluations:trigger`, `evaluations:read`
+- `feedback:submit`
+- `reviewers:admin`
+- `infrastructure:admin`
+
+All tokens encode their allowed scopes; service middleware maps scopes to the matrix above.
+
 ## Authentication Model
 
 1. **Identity provider**: leverage the existing org SSO or short-lived API tokens scoped per role.
@@ -65,6 +79,9 @@ While not part of the initial plan, designate an administrator role to manage au
 - Keep authorization logic centralized (e.g., `orchestration.auth` module) so the same policies apply to REST and LangChain callbacks.
 - UI should request only the scopes it needs; review flows never load persona identifiers until the verdict is persisted.
 - Store all role assignments in configuration that supports code review (e.g., YAML manifest in infrastructure repo) to avoid drift.
+- Library view surfaces persona/scenario CRUD affordances only when the client session includes the corresponding `*:write` scope.
+- Queue view shows evaluation status, tool-usage budgets, and permits cancellation/retry if `evaluations:trigger` scope is present.
+- Audit Log view streams structured records emitted by `TraceLogger` plus auth events; retention policy matches compliance requirements.
 
 ## Next Steps
 

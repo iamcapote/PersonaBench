@@ -218,6 +218,10 @@ Each template ships with: map schema, factions, encounter clocks, economy, socia
   - Turn-by-turn map, dice rolls, comms transcript, contract events, and scoring overlays.
 - Leaderboards:
   - Per-scenario and global tables; filters by class/tier/ethics/cooperation mode; downloadable run bundles.
+- Drag-and-drop creator:
+  - Low-friction builder for personas, scenarios, and rule modules with live previews of generated JSON/YAML/DSL artifacts.
+  - Inline docstrings and code snippets for every adapter, rule, and scoring module so users can inspect mechanics before publishing.
+  - One-click “export to repo” flow that saves generated content alongside human-readable explanations and links back to the governing rules.
 
 ---
 

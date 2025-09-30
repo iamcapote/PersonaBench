@@ -8,16 +8,20 @@ This plan outlines actionable next steps for developing and improving PersonaBen
 ### 1. Orchestration & Service Layer (LangChain)
 - **Objective**: Expose the existing harness through a LangChain-powered service interface that the frontend (and external clients) can call.
 - **Tasks**:
-  - Add LangChain + FastAPI dependencies to the Python package (update `pyproject.toml`).
-  - Implement LangChain `Runnable` wrappers around persona agents and environment adapters.
-  - Scaffold `/api/personas`, `/api/scenarios`, `/api/evaluations` endpoints that invoke LangChain chains and stream trace logs.
+  - [x] Add LangChain + FastAPI dependencies to the Python package (update `pyproject.toml`).
+  - [x] Implement LangChain `Runnable` wrappers around persona agents and environment adapters (see `orchestration/chains.py`).
+  - [x] Scaffold `/api/personas`, `/api/scenarios`, `/api/evaluations` endpoints that invoke LangChain chains.
+  - [ ] Extend evaluation chain with async execution, trace streaming, and richer harness wiring.
 
 ### 2. Admin & Operator Experience
 - **Objective**: Deliver authenticated UI and APIs for managing personas, scenarios, and evaluation runs.
 - **Tasks**:
-  - Implement persona/scenario CRUD endpoints with schema validation and versioning metadata.
+  - [x] Implement persona/scenario CRUD endpoints with schema validation and versioning metadata (see FastAPI routes in `orchestration/routes.py` and catalog helpers in `orchestration/catalog.py`, covered by `tests/test_orchestration_crud.py`).
   - Update the React app with admin tabs for library, queue, and audit logs; migrate persistence from client-only storage to service calls.
-  - Document workflow roles (operator, reviewer) and authorization requirements.
+  - [x] Document workflow roles (operator, reviewer) and authorization requirements (see `docs/operator_roles.md`).
+  - Design a drag-and-drop (DnD) builder that lets operators create and save personas, scenarios, and rule variants with inline previews of the underlying JSON/YAML.
+  - Surface game manifests, rule packs, and adapter code snippets directly in the UI so users can inspect mechanics before running evaluations.
+  - Add guided transparency tooling (side-by-side code + UI) so every change to games or personas can be traced back to source files.
 
 ### 3. Double-Blind Feedback Pipeline
 - **Objective**: Capture human preference data by presenting cached persona responses side-by-side.
@@ -36,9 +40,9 @@ This plan outlines actionable next steps for developing and improving PersonaBen
 ### 5. Text-Based Scenario Suite
 - **Objective**: Introduce lightweight card/negotiation games that run entirely in Python.
 - **Tasks**:
-  - Implement solitaire and heads-up poker adapters under `bench/adapters/` with deterministic seeds.
-  - Add manifests under `scenarios/` and corresponding tests.
-  - Document scenario playbooks in `docs/scenarios/`.
+  - [x] Implement solitaire and heads-up poker adapters under `bench/adapters/` with deterministic seeds (see `bench/adapters/solitaire/adapter.py` and `bench/adapters/poker/adapter.py`).
+  - [x] Add manifests under `scenarios/` and corresponding tests (`games/poker/practice.yaml`, `tests/test_heads_up_poker_adapter.py`).
+  - [x] Document scenario playbooks in `docs/scenarios/` (see updated poker section in `docs/scenarios/playbooks.md`).
 
 ### 6. Enhance Logging and Observability
 - **Objective**: Improve `TraceLogger` and surrounding tooling to support service deployment.

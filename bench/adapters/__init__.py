@@ -6,6 +6,7 @@ from .webarena.adapter import WebArenaAdapter
 from .osworld.adapter import OSWorldAdapter
 from .tales.adapter import TALESAdapter
 from .solitaire.adapter import SolitaireAdapter
+from .poker.adapter import HeadsUpPokerAdapter
 from .blackjack.adapter import BlackjackAdapter
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "TALESAdapter",
     "SolitaireAdapter",
     "BlackjackAdapter",
+    "HeadsUpPokerAdapter",
 ]

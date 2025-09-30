@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List
+from typing import Any, Dict, List
 
 from fastapi import APIRouter, HTTPException, status
 
@@ -14,6 +14,10 @@ from .catalog import (
 	list_games,
 	list_personas,
 	list_scenarios,
+	persona_exists,
+	save_persona,
+	save_scenario,
+	scenario_exists,
 	scenario_tags,
 )
 from .chains import build_evaluation_chain
@@ -22,7 +26,9 @@ from .schemas import (
 	EvaluationResult,
 	GameSummary,
 	PersonaSummary,
+	PersonaUpsertRequest,
 	ScenarioSummary,
+	ScenarioUpsertRequest,
 )
 
 api_router = APIRouter()
@@ -81,11 +87,177 @@ def read_personas() -> List[PersonaSummary]:
 	return [_persona_summary(entry) for entry in list_personas()]
 
 
+def _validate_persona_definition(payload: Any) -> Dict[str, Any]:
+	if not isinstance(payload, dict):
+		raise HTTPException(
+			status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+			detail="Persona definition must be an object",
+		)
+
+	definition: Dict[str, Any] = dict(payload)
+
+	name = definition.get("name")
+	if not isinstance(name, str) or not name.strip():
+		raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Persona name is required")
+	definition["name"] = name.strip()
+
+	version = definition.get("version")
+	if not isinstance(version, str) or not version.strip():
+		raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Persona version must be a non-empty string")
+	definition["version"] = version.strip()
+
+	planning = definition.get("planning_horizon")
+	try:
+		planning_int = int(planning)
+	except (TypeError, ValueError):
+		raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="planning_horizon must be an integer") from None
+	if planning_int <= 0:
+		raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="planning_horizon must be positive")
+	definition["planning_horizon"] = planning_int
+
+	risk = definition.get("risk_tolerance")
+	if not isinstance(risk, (int, float)):
+		raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="risk_tolerance must be numeric")
+	if not 0 <= float(risk) <= 1:
+		raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="risk_tolerance must be between 0 and 1")
+	definition["risk_tolerance"] = float(risk)
+
+	tools = definition.get("tools")
+	if not isinstance(tools, dict):
+		raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="tools must be an object")
+	allowed = tools.get("allowed")
+	if not isinstance(allowed, list) or not allowed:
+		raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="tools.allowed must be a non-empty list")
+	for item in allowed:
+		if not isinstance(item, str) or not item.strip():
+			raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="tools.allowed entries must be non-empty strings")
+	definition["tools"] = {**tools, "allowed": [entry.strip() for entry in allowed]}  # type: ignore[arg-type]
+
+	return definition
+
+
+def _validate_environment_name(value: str) -> str:
+	environment = value.strip()
+	if not environment:
+		raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="environment must be provided")
+	if any(delimiter in environment for delimiter in ("/", "\\")) or environment.startswith("."):
+		raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="environment must be a single folder name")
+	return environment
+
+
+def _validate_scenario_definition(payload: Any) -> Dict[str, Any]:
+	if not isinstance(payload, dict):
+		raise HTTPException(
+			status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+			detail="Scenario definition must be an object",
+		)
+
+	definition: Dict[str, Any] = dict(payload)
+
+	scenario_id = definition.get("id")
+	if not isinstance(scenario_id, str) or not scenario_id.strip():
+		raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Scenario id is required")
+	definition["id"] = scenario_id.strip()
+
+	mode = definition.get("mode")
+	if not isinstance(mode, str) or not mode.strip():
+		raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Scenario mode must be a non-empty string")
+	definition["mode"] = mode.strip()
+
+	metadata = definition.get("metadata") or {}
+	if not isinstance(metadata, dict):
+		raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Scenario metadata must be an object")
+	definition["metadata"] = dict(metadata)
+
+	checks = definition.get("checks")
+	if checks is not None and not isinstance(checks, dict):
+		raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Scenario checks must be an object if provided")
+
+	return definition
+
+
 @api_router.get("/scenarios", response_model=List[ScenarioSummary])
 def read_scenarios() -> List[ScenarioSummary]:
 	"""Return available evaluation scenarios."""
 
 	return [_scenario_summary(entry) for entry in list_scenarios()]
+
+
+@api_router.post("/personas", response_model=PersonaSummary, status_code=status.HTTP_201_CREATED)
+def create_persona(request: PersonaUpsertRequest) -> PersonaSummary:
+	"""Create a persona definition on disk."""
+
+	definition = _validate_persona_definition(request.definition)
+	name = definition["name"]
+	if persona_exists(name):
+		raise HTTPException(status.HTTP_409_CONFLICT, detail=f"Persona '{name}' already exists")
+
+	saved = save_persona(definition)
+	if saved is None:
+		raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to persist persona definition")
+
+	return _persona_summary(saved)
+
+
+@api_router.put("/personas/{persona_name}", response_model=PersonaSummary)
+def update_persona(persona_name: str, request: PersonaUpsertRequest) -> PersonaSummary:
+	"""Update an existing persona definition."""
+
+	definition = _validate_persona_definition(request.definition)
+	if definition["name"] != persona_name:
+		raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Path persona_name must match definition.name")
+
+	if not persona_exists(persona_name):
+		raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"Persona '{persona_name}' not found")
+
+	saved = save_persona(definition)
+	if saved is None:
+		raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to persist persona definition")
+
+	return _persona_summary(saved)
+
+
+@api_router.post("/scenarios", response_model=ScenarioSummary, status_code=status.HTTP_201_CREATED)
+def create_scenario(request: ScenarioUpsertRequest) -> ScenarioSummary:
+	"""Create a scenario definition in the repository."""
+
+	environment = _validate_environment_name(request.environment)
+	definition = _validate_scenario_definition(request.definition)
+	scenario_id = definition["id"]
+	if scenario_exists(scenario_id):
+		raise HTTPException(status.HTTP_409_CONFLICT, detail=f"Scenario '{scenario_id}' already exists")
+
+	saved = save_scenario(definition, environment=environment)
+	if saved is None:
+		raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to persist scenario definition")
+
+	return _scenario_summary(saved)
+
+
+@api_router.put("/scenarios/{scenario_id}", response_model=ScenarioSummary)
+def update_scenario(scenario_id: str, request: ScenarioUpsertRequest) -> ScenarioSummary:
+	"""Update an existing scenario definition."""
+
+	existing = get_scenario(scenario_id)
+	if existing is None:
+		raise HTTPException(status.HTTP_404_NOT_FOUND, detail=f"Scenario '{scenario_id}' not found")
+
+	environment = _validate_environment_name(request.environment)
+	if environment != existing.get("environment"):
+		raise HTTPException(
+			status.HTTP_422_UNPROCESSABLE_CONTENT,
+			detail="Scenario environment cannot be changed via update",
+		)
+
+	definition = _validate_scenario_definition(request.definition)
+	if definition["id"] != scenario_id:
+		raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Path scenario_id must match definition.id")
+
+	saved = save_scenario(definition, environment=environment)
+	if saved is None:
+		raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to persist scenario definition")
+
+	return _scenario_summary(saved)
 
 
 @api_router.get("/games", response_model=List[GameSummary])

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import re
+from datetime import UTC, datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
@@ -45,6 +47,12 @@ def get_persona(name: str) -> Optional[Dict[str, Any]]:
     return _load_personas().get(name)
 
 
+def persona_exists(name: str) -> bool:
+    """Return True if a persona with the provided name exists."""
+
+    return get_persona(name) is not None
+
+
 @lru_cache(maxsize=1)
 def _load_scenarios() -> Dict[str, Dict[str, Any]]:
     if not SCENARIO_DIR.exists():
@@ -77,6 +85,12 @@ def get_scenario(scenario_id: str) -> Optional[Dict[str, Any]]:
     """Return a scenario entry if present."""
 
     return _load_scenarios().get(scenario_id)
+
+
+def scenario_exists(scenario_id: str) -> bool:
+    """Return True if a scenario with the provided id exists."""
+
+    return get_scenario(scenario_id) is not None
 
 
 @lru_cache(maxsize=1)
@@ -135,3 +149,110 @@ def game_tags(entry: Dict[str, Any]) -> Iterable[str]:
     if labelled_tags := metadata.get("tags"):
         tags.extend(str(tag) for tag in labelled_tags)
     return tags
+
+
+_SAFE_CHARS_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _slugify(value: str) -> str:
+    slug = _SAFE_CHARS_RE.sub("-", value.strip().lower()).strip("-")
+    return slug or "item"
+
+
+def persona_file_path(name: str) -> Path:
+    slug = _slugify(name)
+    return PERSONA_DIR / f"{slug}.json"
+
+
+def scenario_file_path(identifier: str, environment: str) -> Path:
+    slug = _slugify(identifier)
+    folder = SCENARIO_DIR / environment
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder / f"{slug}.yaml"
+
+
+def invalidate_persona_cache() -> None:
+    _load_personas.cache_clear()
+
+
+def invalidate_scenario_cache() -> None:
+    _load_scenarios.cache_clear()
+
+
+def save_persona(definition: Dict[str, Any]) -> Dict[str, Any]:
+    """Persist a persona definition to disk and refresh cache."""
+
+    if "name" not in definition:
+        raise CatalogError("Persona definition missing 'name'")
+
+    PERSONA_DIR.mkdir(parents=True, exist_ok=True)
+    path = persona_file_path(definition["name"])
+
+    existing_metadata: Dict[str, Any] = {}
+    if path.exists():
+        with path.open("r", encoding="utf-8") as handle:
+            existing_data = json.load(handle)
+        existing_metadata = existing_data.get("metadata", {}) if isinstance(existing_data, dict) else {}
+
+    timestamp = datetime.now(UTC).isoformat()
+    metadata = dict(existing_metadata)
+
+    request_metadata = definition.get("metadata") if isinstance(definition, dict) else None
+    if isinstance(request_metadata, dict):
+        metadata.update(request_metadata)
+
+    created_at = existing_metadata.get("created_at") or (metadata.get("created_at") if isinstance(metadata, dict) else None)
+    if not created_at:
+        created_at = timestamp
+    metadata["created_at"] = created_at
+    metadata["updated_at"] = timestamp
+
+    enriched = dict(definition)
+    enriched["metadata"] = metadata
+
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(enriched, handle, indent=2, ensure_ascii=False)
+        handle.write("\n")
+
+    invalidate_persona_cache()
+    return get_persona(definition["name"])
+
+
+def save_scenario(definition: Dict[str, Any], *, environment: str) -> Dict[str, Any]:
+    """Persist a scenario definition under the specified environment."""
+
+    if "id" not in definition:
+        raise CatalogError("Scenario definition missing 'id'")
+
+    path = scenario_file_path(definition["id"], environment)
+
+    existing_metadata: Dict[str, Any] = {}
+    if path.exists():
+        with path.open("r", encoding="utf-8") as handle:
+            existing_data = yaml.safe_load(handle)
+        if isinstance(existing_data, dict):
+            existing_metadata = existing_data.get("metadata", {}) or {}
+
+    timestamp = datetime.now(UTC).isoformat()
+    metadata = dict(existing_metadata)
+
+    request_metadata = definition.get("metadata") if isinstance(definition, dict) else None
+    if isinstance(request_metadata, dict):
+        metadata.update(request_metadata)
+
+    created_at = existing_metadata.get("created_at") if existing_metadata else None
+    if not created_at and isinstance(metadata, dict):
+        created_at = metadata.get("created_at")
+    if not created_at:
+        created_at = timestamp
+    metadata["created_at"] = created_at
+    metadata["updated_at"] = timestamp
+
+    enriched = dict(definition)
+    enriched["metadata"] = metadata
+
+    with path.open("w", encoding="utf-8") as handle:
+        yaml.safe_dump(enriched, handle, sort_keys=False)
+
+    invalidate_scenario_cache()
+    return get_scenario(definition["id"])

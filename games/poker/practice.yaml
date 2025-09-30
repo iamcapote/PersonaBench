@@ -1,0 +1,13 @@
+id: poker-practice
+mode: simulation
+checks:
+  type: noop
+metadata:
+  description: "Practice deterministic heads-up poker decision making"
+  domain: games
+  tags:
+    - poker
+    - card-games
+    - strategy
+  difficulty: medium
+  estimated_time: 4

@@ -83,3 +83,16 @@ class EvaluationResult(BaseModel):
 
     status: str = Field(..., description="Lifecycle status of the evaluation run")
     details: Dict[str, Any] = Field(default_factory=dict, description="Raw chain output")
+
+
+class PersonaUpsertRequest(BaseModel):
+    """Request payload for creating or updating personas."""
+
+    definition: Dict[str, Any] = Field(..., description="Complete persona JSON definition")
+
+
+class ScenarioUpsertRequest(BaseModel):
+    """Request payload for creating or updating scenarios."""
+
+    environment: str = Field(..., description="Scenario environment folder (e.g., blackjack)")
+    definition: Dict[str, Any] = Field(..., description="Scenario YAML definition as a mapping")
