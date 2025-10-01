@@ -41,6 +41,16 @@ See [`leaderboard/submission_spec.md`](leaderboard/submission_spec.md) for submi
 - **Frontend (React app)**: Lives under `src/`. The UI now hydrates personas and scenarios from the orchestration service (with local fallbacks) but still operates as a prototype without operator/admin consoles or remote scheduling controls. A head-to-head analytics tab visualises persona matchups; surfacing live match traces is still on the roadmap.
 - **Build + Tests**: `pytest` covers schema validation, metric utilities, and a simple agent smoke test. Frontend code has no automated test coverage.
 
+### Persona Stat Card Inspiration
+
+Persona benchmarking benefits from dense, skimmable visuals. The mockups below illustrate how we plan to present persona identity, command kit, and competitive metrics side by side:
+
+![Sample persona identity card](docs/assets/persona-card-ultron.svg)
+
+![Sample persona performance dashboard](docs/assets/persona-stats-dashboard.svg)
+
+Borrow the structure when designing dashboards: lead with identity, cluster quantitative stats into themed blocks, and keep qualitative copy concise.
+
 ### Games vs. Scenarios
 
 - **Games** live under `games/` and target tightly-scoped logical drills: solitaire variants, blackjack, poker, and other probability puzzles. They stress mathematical reasoning and near-term game theory under deterministic rules. The roadmap in [`games/games.md`](games/games.md) captures the rollout of single-persona drills and multi-agent table games, including the newly playable tic-tac-toe match powered by the shared game master.

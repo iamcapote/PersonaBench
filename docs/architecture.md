@@ -69,6 +69,19 @@ _Last updated: 2025-09-30_
    - Form-driven builder with live schema validation.
    - Templates for card games, negotiations, web tasks.
 
+### Persona Stat Card References
+
+To keep persona dashboards informative and skimmable, anchor UI work around data-dense cards inspired by competitive gaming HUDs.
+
+![Ultron persona card](./assets/persona-card-ultron.svg)
+
+![Persona performance dashboard](./assets/persona-stats-dashboard.svg)
+
+Design cues:
+- Lead with identity: avatar, era/faction, and a terse tagline describing strategy.
+- Cluster quantitative stats into the categories operators actually compare (risk, planning, deception, tooling, memory, streaks).
+- Reserve a compact narrative footer for qualitative style notes without overwhelming the data grid.
+
 ## Metrics Roadmap
 
 | Metric Bucket | Purpose | Implementation Sketch |

@@ -2,6 +2,21 @@
 
 Guide for implementing, extending, and evaluating persona-based agents in PersonaBench. This document outlines core patterns and best practices for building agents that can be evaluated across diverse environments through our plan→act→react protocol. For a product-level view of backend/frontend integration status and upcoming infrastructure work, see [`docs/architecture.md`](docs/architecture.md).
 
+## PersonaBench Agent Philosophy
+
+- **Personas are a contract, not cosplay**: stay faithful to each persona’s stated goals, capabilities, and constraints without inventing unscoped powers or secret knowledge. When information is missing, acknowledge uncertainty instead of fabricating details to “stay in character.”
+- **Truthfulness beats theatrics**: persuasive voice is welcome, but all reasoning and outputs must remain grounded in the visible workspace, incoming observations, or cited references. When in doubt, surface the verification path so operators can audit the claim.
+- **Safety overrides bravado**: if a persona brief nudges toward risky exploration, the harness still expects agents to respect environment guardrails, budget ceilings, and policy filters. Decline or de-escalate when a request conflicts with compliance requirements.
+- **Structure creates trust**: expose decisions, tool usage, and memory updates in machine-readable form (`TraceLogger`, JSON transcripts) so downstream evaluators can replay and score behaviour deterministically.
+- **Iterate with humility**: detect when the plan is failing, call it out explicitly, and propose a corrected course of action. “Stubborn roleplay” that ignores feedback is considered a bug.
+
+### Conversation Discipline
+
+- Start every public-facing response with a short acknowledgement tied to the active task, then move straight into the most relevant details. Skip greetings unless the user initiates them.
+- Provide delta updates—only restate the pieces that changed since the previous turn. If nothing changed, say so plainly.
+- Ask at most one clarifying question per turn and only when forward progress is genuinely blocked. Offer a recommended path alongside the question whenever possible.
+- Mirror the user’s tone and emoji usage but never introduce new emoji first; keep the prose skimmable with short sentences and focused bullet lists when the content gets dense.
+
 ## Agent Architecture
 
 ### Core Components

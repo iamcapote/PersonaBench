@@ -9,10 +9,11 @@ from orchestration import state
 from orchestration.app import create_app
 
 
-def test_evaluation_responses_are_persisted_and_queryable() -> None:
+def test_evaluation_responses_are_persisted_and_queryable(admin_headers) -> None:
     state.clear_state()
     app = create_app()
     client = TestClient(app)
+    client.headers.update(admin_headers)
 
     try:
         response = client.post(
@@ -155,10 +156,11 @@ def test_evaluation_responses_are_persisted_and_queryable() -> None:
         state.clear_state()
 
 
-def test_evaluation_response_detail_not_found() -> None:
+def test_evaluation_response_detail_not_found(admin_headers) -> None:
     state.clear_state()
     app = create_app()
     client = TestClient(app)
+    client.headers.update(admin_headers)
 
     try:
         response = client.get("/api/admin/evaluations/responses/missing")
@@ -167,10 +169,11 @@ def test_evaluation_response_detail_not_found() -> None:
         state.clear_state()
 
 
-def test_comparison_pair_requires_distinct_responses() -> None:
+def test_comparison_pair_requires_distinct_responses(admin_headers) -> None:
     state.clear_state()
     app = create_app()
     client = TestClient(app)
+    client.headers.update(admin_headers)
 
     try:
         first = client.post(
@@ -192,10 +195,11 @@ def test_comparison_pair_requires_distinct_responses() -> None:
         state.clear_state()
 
 
-def test_comparison_vote_requires_valid_slot_and_pair() -> None:
+def test_comparison_vote_requires_valid_slot_and_pair(admin_headers) -> None:
     state.clear_state()
     app = create_app()
     client = TestClient(app)
+    client.headers.update(admin_headers)
 
     try:
         missing_pair_vote = client.post(

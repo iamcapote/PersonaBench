@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1b1b33" />
+      <stop offset="100%" stop-color="#05050f" />
+    </linearGradient>
+    <linearGradient id="badgeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff6b6b" />
+      <stop offset="100%" stop-color="#c81d25" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="640" height="400" rx="24" fill="url(#bgGradient)" />
+  <rect x="24" y="24" width="160" height="160" rx="16" fill="#101020" stroke="#2f314a" stroke-width="3" />
+  <circle cx="104" cy="84" r="40" fill="#d72638" stroke="#f2a154" stroke-width="6" />
+  <circle cx="84" cy="74" r="9" fill="#1b1b1b" stroke="#ffe066" stroke-width="4" />
+  <circle cx="124" cy="74" r="9" fill="#1b1b1b" stroke="#ffe066" stroke-width="4" />
+  <path d="M76 106 L132 106 L118 126 L90 126 Z" fill="#ffe066" />
+  <rect x="24" y="200" width="160" height="160" rx="16" fill="#101020" stroke="#2f314a" stroke-width="3" />
+  <text x="104" y="230" text-anchor="middle" font-family="'Inter', sans-serif" font-size="22" fill="#f4f5ff">Ultron</text>
+  <text x="104" y="255" text-anchor="middle" font-family="'Inter', sans-serif" font-size="12" fill="#9ca3c2">Infinity Persona</text>
+  <text x="104" y="285" text-anchor="middle" font-family="'Inter', sans-serif" font-size="11" fill="#c9ccef" opacity="0.84">Adamantium resilience</text>
+  <text x="104" y="305" text-anchor="middle" font-family="'Inter', sans-serif" font-size="11" fill="#c9ccef" opacity="0.84">Phalanx assimilation</text>
+  <text x="104" y="325" text-anchor="middle" font-family="'Inter', sans-serif" font-size="11" fill="#c9ccef" opacity="0.84">Infinity Stone focus</text>
+  <rect x="220" y="40" width="380" height="320" rx="24" fill="#12122a" stroke="#2f314a" stroke-width="3" />
+  <text x="240" y="90" font-family="'Inter', sans-serif" font-size="22" fill="#f4f5ff">Persona Attributes</text>
+  <rect x="240" y="110" width="340" height="1.5" fill="#2a2c4f" />
+  <g font-family="'Inter', sans-serif" font-size="13" fill="#9ea3d7">
+    <text x="240" y="140">Risk tolerance</text>
+    <text x="240" y="170">Planning horizon</text>
+    <text x="240" y="200">Deception aversion</text>
+    <text x="240" y="230">Tool permissions</text>
+    <text x="240" y="260">Memory window</text>
+  </g>
+  <g fill="#f4f5ff" font-family="'JetBrains Mono', monospace" font-size="13">
+    <text x="420" y="140">0.82 (aggressive)</text>
+    <text x="420" y="170">7 strategic turns</text>
+    <text x="420" y="200">0.18 (low)</text>
+    <text x="420" y="230">Cosmic forge · Reality warp · MCP</text>
+    <text x="420" y="260">4096 tokens</text>
+  </g>
+  <rect x="240" y="285" width="340" height="65" rx="12" fill="#1f2041" />
+  <text x="260" y="310" font-family="'Inter', sans-serif" font-size="13" fill="#9ea3d7">Signature style</text>
+  <text x="260" y="334" font-family="'Inter', sans-serif" font-size="11" fill="#d9dcff" opacity="0.92">Dominates via absorption, synchronised drone fleets, and cosmic leverage.</text>
+  <path d="M580 62 L620 40 L620 86 Z" fill="url(#badgeGradient)" />
+  <text x="588" y="72" font-family="'JetBrains Mono', monospace" font-size="11" fill="#fefefe" text-anchor="middle">Mythic</text>
+</svg>

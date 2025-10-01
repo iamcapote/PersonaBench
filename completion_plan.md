@@ -62,7 +62,7 @@ This plan outlines actionable next steps for developing and improving PersonaBen
   - [x] Build pairing logic + APIs for retrieving anonymized `A/B` comparisons.
   - Create reviewer UI flow, storage for votes, and Bradley–Terry aggregation job.
     - [x] Persist reviewer votes with admin APIs (state helpers, validation, testing).
-    - [ ] Deliver reviewer-facing UI for collecting preferences.
+    - [x] Deliver reviewer-facing UI for collecting preferences (compare workspace card, reviewer inputs, submission plumbing).
   - [x] Implement Bradley–Terry aggregation job and reporting endpoints.
 
 ### 5. Model Comparison Analytics
@@ -97,6 +97,27 @@ This plan outlines actionable next steps for developing and improving PersonaBen
   - [x] Implement a production-grade `TicTacToeGame` engine that enforces legal moves, scoring, and structured events.
   - [x] Add tic-tac-toe match configs plus automated tests covering invalid moves and full-game completion.
   - Integrate existing blackjack/poker adapters with the game master for true multi-persona play.
+
+## Latest Progress (2025-10-01)
+- Completed the double-blind reviewer workspace in the React app, enabling scenario filtering, reviewer metadata capture, and preference submission wired to comparison vote APIs.
+- Added navigation hooks and transparency panels so reviewers can jump between comparisons and underlying persona/scenario definitions.
+- Ran `npm run lint` (TypeScript `tsc --noEmit`) to validate the new UI and resolved a `Select` prop regression introduced by the disabled state.
+
+### Paused Track: Admin Auth & Frontend Wiring
+- **Backend status**: FastAPI admin, queue, audit, and persona/scenario mutation routes now respect an env-driven `PERSONABENCH_ADMIN_KEY`. Tests inject a deterministic key through `tests/conftest.py` and update headers accordingly.
+- **Outstanding work**: The React prototype still issues unauthenticated requests; we need a lightweight admin key capture (client-side storage, attach header/query) plus error handling for `403` responses.
+- **Resume checklist**:
+  1. Add a global admin key provider in the frontend (context + secure input) and plumb it into `fetch` helpers touching `/admin/*`, `/api/personas`, and `/api/scenarios` mutations.
+  2. Document operator setup flow (set env var, copy key into UI) and ensure the orchestration service tolerates missing keys by responding with `403` rather than `401`.
+  3. Re-run full backend + frontend test suites (`pytest`, `npm run lint`) once the UI wiring lands.
+  4. Consider a future secret rotation story (key reload without restart) before shipping beyond internal environments.
+
+Leave this section intact until the UI work merges so future contributors can resume without spelunking commit history.
+
+### Follow-Up Opportunities
+- Add optimistic loading states and error toasts for vote submission failures once backend retries are defined.
+- Extend the reviewer dashboard with aggregation summaries from the Bradley–Terry job to close the loop between vote collection and analytics.
+- Evaluate end-to-end API tests that exercise the reviewer flow via Playwright or Vitest + MSW before cutting a release.
 
 ## Current State of the App
 - 📝 Schema validation: Working

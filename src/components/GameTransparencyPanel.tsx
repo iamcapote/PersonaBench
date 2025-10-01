@@ -3,18 +3,7 @@ import type { ComponentType } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { FileText, Code } from "@phosphor-icons/react"
-
-export interface AssetSnippet {
-  path: string
-  content: string
-  language?: string | null
-}
-
-export interface GameAssets {
-  manifest: AssetSnippet
-  rulePack?: AssetSnippet | null
-  adapter?: AssetSnippet | null
-}
+import type { AssetSnippetPayload, GameAssets } from "@/lib/appTypes"
 
 interface GameTransparencyPanelProps {
   scenarioName: string
@@ -32,7 +21,7 @@ const truncateContent = (content: string): string => {
   return [...lines.slice(0, MAX_LINES), "…"].join("\n")
 }
 
-const AssetSection = ({ title, snippet, icon: Icon }: { title: string; snippet: AssetSnippet; icon: ComponentType<{ size?: number | string; className?: string }> }) => {
+const AssetSection = ({ title, snippet, icon: Icon }: { title: string; snippet: AssetSnippetPayload; icon: ComponentType<{ size?: number | string; className?: string }> }) => {
   const languageLabel = snippet.language ? snippet.language.toUpperCase() : "TEXT"
 
   return (

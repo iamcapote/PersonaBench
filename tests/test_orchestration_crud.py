@@ -23,9 +23,10 @@ def _cleanup_path(path: Path) -> None:
         pass
 
 
-def test_persona_create_and_update() -> None:
+def test_persona_create_and_update(admin_headers) -> None:
     app = create_app()
     client = TestClient(app)
+    client.headers.update(admin_headers)
 
     persona_name = f"Test Persona {uuid4().hex[:6]}"
     definition = {
@@ -66,9 +67,10 @@ def test_persona_create_and_update() -> None:
         catalog.invalidate_persona_cache()
 
 
-def test_scenario_create_and_update() -> None:
+def test_scenario_create_and_update(admin_headers) -> None:
     app = create_app()
     client = TestClient(app)
+    client.headers.update(admin_headers)
 
     scenario_id = f"poker-crud-{uuid4().hex[:5]}"
     environment = "custom"

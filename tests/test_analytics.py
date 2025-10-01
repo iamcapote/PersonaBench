@@ -11,9 +11,10 @@ def clear_state_fixture():
     yield
     state.clear_state()
 
-def test_bradley_terry_aggregation_basic():
+def test_bradley_terry_aggregation_basic(admin_headers):
     app = create_app()
     client = TestClient(app)
+    client.headers.update(admin_headers)
 
     response_a = state.record_evaluation_response(
         run_id="run-a",
@@ -64,9 +65,10 @@ def test_bradley_terry_aggregation_basic():
     assert summary["target_id"] == "solitaire-practice"
     assert summary["converged"] is True
 
-def test_bradley_terry_aggregation_empty():
+def test_bradley_terry_aggregation_empty(admin_headers):
     app = create_app()
     client = TestClient(app)
+    client.headers.update(admin_headers)
     agg_resp = client.get("/api/admin/evaluations/aggregate", params={"target": "solitaire-practice"})
     assert agg_resp.status_code == 200, agg_resp.text
     result = agg_resp.json()

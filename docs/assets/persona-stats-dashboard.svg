@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520">
+  <defs>
+    <linearGradient id="panelGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#122736" />
+      <stop offset="100%" stop-color="#08121a" />
+    </linearGradient>
+    <linearGradient id="cardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1f3a56" />
+      <stop offset="100%" stop-color="#15273a" />
+    </linearGradient>
+    <linearGradient id="barGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3ddc97" />
+      <stop offset="100%" stop-color="#28b487" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="960" height="520" rx="32" fill="url(#panelGradient)" />
+  <text x="60" y="80" font-family="'Inter', sans-serif" font-size="34" fill="#f8fbff">Persona Performance Dashboard</text>
+  <text x="60" y="110" font-family="'Inter', sans-serif" font-size="16" fill="#a8b9c6">Snapshot of tournament-grade metrics for card and strategy personas.</text>
+  <rect x="60" y="140" width="360" height="320" rx="24" fill="url(#cardGradient)" stroke="#2f4b61" stroke-width="3" />
+  <text x="90" y="180" font-family="'Inter', sans-serif" font-size="22" fill="#f8fbff">Poker Persona — "Chad"</text>
+  <g font-family="'Inter', sans-serif" font-size="13" fill="#9db4c5">
+    <text x="90" y="210">Hands played</text>
+    <text x="90" y="240">Win rate</text>
+    <text x="90" y="270">Expected value / hour</text>
+    <text x="90" y="300">ROI</text>
+    <text x="90" y="330">Aggression factor</text>
+    <text x="90" y="360">Tournament finishes</text>
+    <text x="90" y="390">Best streak</text>
+  </g>
+  <g font-family="'JetBrains Mono', monospace" font-size="13" fill="#f3f6ff">
+    <text x="300" y="210">3,529</text>
+    <text x="300" y="240">51.5%</text>
+    <text x="300" y="270">+$3.02</text>
+    <text x="300" y="300">20.4%</text>
+    <text x="300" y="330">2.7</text>
+    <text x="300" y="360">94 finals · 405 wins</text>
+    <text x="300" y="390">Winning streak: 13</text>
+  </g>
+  <rect x="450" y="140" width="450" height="320" rx="24" fill="url(#cardGradient)" stroke="#2f4b61" stroke-width="3" />
+  <text x="480" y="180" font-family="'Inter', sans-serif" font-size="22" fill="#f8fbff">HUD Snapshot — "GG Hero"</text>
+  <g font-family="'Inter', sans-serif" font-size="13" fill="#9db4c5">
+    <text x="480" y="210">VPIP</text>
+    <text x="480" y="240">PFR</text>
+    <text x="480" y="270">3-Bet</text>
+    <text x="480" y="300">C-Bet (Flop / Turn / River)</text>
+    <text x="480" y="330">WTSD</text>
+    <text x="480" y="360">Hands observed</text>
+    <text x="480" y="390">Style</text>
+  </g>
+  <g font-family="'JetBrains Mono', monospace" font-size="13" fill="#f3f6ff">
+    <text x="660" y="210">71%</text>
+    <text x="660" y="240">22%</text>
+    <text x="660" y="270">15%</text>
+    <text x="660" y="300">58% / 28% / 100%</text>
+    <text x="660" y="330">18%</text>
+    <text x="660" y="360">34,850</text>
+    <text x="660" y="390">Loose-Aggressive — exploitative</text>
+  </g>
+  <text x="60" y="480" font-family="'Inter', sans-serif" font-size="14" fill="#9db4c5">Use these panels as inspiration for persona stat layout. Adapt metrics to each benchmark while keeping a dense, high-signal presentation.</text>
+</svg>
