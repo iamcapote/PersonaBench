@@ -1,0 +1,15 @@
+id: tic-tac-toe-practice
+mode: match
+players:
+  - player_x
+  - player_o
+engine: bench.games.tic_tac_toe.TicTacToeGame
+metadata:
+  description: "Face another persona in a full tic-tac-toe match using the turn-based game master."
+  domain: games
+  tags:
+    - tic-tac-toe
+    - board-games
+    - strategy
+  difficulty: easy
+  estimated_time: 2

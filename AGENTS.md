@@ -17,6 +17,8 @@ Guide for implementing, extending, and evaluating persona-based agents in Person
    - Usage constraints enforcement
    - Rate limiting and cooldowns
    - Performance monitoring
+   - Standardized invocation: agents should favor Model Context Protocol (MCP) tool calls or service-provided HTTP helpers so invocations remain machine-readable.
+    - Tool discipline: prefer local repository context before invoking external research, escalate to multiple distinct searches only when deep investigation of rapidly evolving topics is unavoidable, and log why each escalation was necessary
 
 3. **Safety Bounds**
    - Risk tolerance enforcement
@@ -29,6 +31,14 @@ Guide for implementing, extending, and evaluating persona-based agents in Person
    - Cross-environment consistency
    - Strategic alignment checks
    - Adaptation boundaries
+
+### Turn-Based Match Flow (New)
+
+- Multi-persona coordination now runs through the shared `GameMaster` (`bench/core/game_master.py`).
+- Games implement the `TurnBasedGame` contract to expose per-player observations, legal moves, and outcome summaries.
+- The harness `MatchRunner` (`harness/match.py`) wires persona agents into the game master so plan→act→react loops execute per turn.
+- Structured `Event` payloads emitted by games (for example tic-tac-toe move events) automatically propagate into trace logs and analytics.
+- Tool routers translate planner output (for example MCP JSON commands) into environment actions so personas can focus on reasoning while the harness handles deterministic execution.
 
 ### Key Principles
 
@@ -52,199 +62,54 @@ What the repo actually tests and runs today:
 
 - `tests/test_persona_examples.py` validates required persona JSON fields (name, version, planning_horizon, risk_tolerance, tools).
 - `tests/test_metrics.py` exercises metric helpers under `bench/eval`.
-- Agent runtime behavior is validated via `tests/test_simple_agent*` which exercise plan→act→react and the `PersonaAgent` contract.
+- Runtime behaviour is verified via `tests/test_simple_agent*` and `tests/test_evaluation_chain.py`, ensuring plan→act→react and the evaluation harness stay stable.
 
 What is NOT present and — importantly — not required by current tests:
 
-- There is no `MemoryManager` runtime implementation under `agents/` or `bench/` and tests do not rely on memory. Documentation examples that referenced `self._update_memory(...)` were illustrative, not runnable.
+- There is no `MemoryManager` runtime implementation under `agents/` or `bench/`; tests do not exercise memory features. Documentation examples that referenced runtime memory were illustrative, not runnable.
 
-Recommendation: keep `memory` in persona JSONs and the UI (it's useful for personas/UIs), but do NOT introduce a runtime MemoryManager unless a concrete evaluation or test needs it. Focus immediate efforts on components that are exercised by tests and the harness (logging, tool budgets, adapters, and metrics).
+Recommendation: keep `memory` in persona JSONs and the UI (it's useful for personas/UIs), but do NOT introduce a runtime MemoryManager unless a concrete evaluation or test needs it. Focus immediate efforts on components that are exercised by tests and the harness (logging, tool budgets, adapters, metrics, and LLM integration).
+
+Multi-persona gameplay now has an end-to-end reference path: see the tic-tac-toe engine in `bench/games/tic_tac_toe/engine.py`, accompanying game/scenario manifests, and tests under `tests/test_tic_tac_toe_match.py`. Future game work should follow the same pattern—encode rules in a `TurnBasedGame`, register manifests under `games/` and `scenarios/`, and add deterministic tests that cover full matches plus edge cases.
 
 ## Core Contract
 
-Agents in PersonaBench must implement the following step loop contract:
+Agents participate in a three-stage loop:
 
-```python
-class PersonaAgent:
-    """Base class for persona-aware agents."""
-    
-    def plan(self, observation: Observation) -> Plan:
-        """Generate a structured plan from current observation.
-        
-        Args:
-            observation: Current environment state
-            
-        Returns:
-            Plan with rationale and concrete steps
-        """
-        
-    def act(self, plan: Plan, observation: Observation) -> Action:
-        """Convert plan into concrete environment action.
-        
-        Args:
-            plan: Previously generated plan
-            observation: Current environment state
-            
-        Returns:
-            Action command with any required arguments
-        """
-        
-    def react(self, observation: Observation, events: list[str]) -> Reaction:
-        """Process feedback and adjust strategy if needed.
-        
-        Args:
-            observation: Post-action environment state  
-            events: List of event names from last step
-            
-        Returns:
-            Reaction with strategy adjustments
-        """
-```
+1. **Plan** – interpret the latest observation, evaluate persona constraints, and produce an ordered list of intended steps.
+2. **Act** – transform the chosen plan into a concrete command (tool invocation, environment action, etc.). When a persona uses MCP or HTTP tools, the command should already be normalized to JSON (`{"tool": "http.get", "args": {...}}`) so the orchestrator can execute it without extra parsing.
+3. **React** – ingest feedback from the environment, adjust internal state, and prepare for the next iteration.
 
-Key Invariants:
-- Plans must respect persona's planning horizon
-- Actions must use allowed tools within budget
-- Reactions must maintain persona consistency
-- All steps must complete within 15min timeout
-
-## Implementation Patterns
+Key invariants:
+- Plans must respect the persona’s planning horizon.
+- Actions must stay within the declared tool budget and whitelist.
+- Reactions must maintain persona continuity across steps.
+- Every loop must finish inside the 15-minute execution guardrail.
 
 ### Plan Generation
 
-Planning involves memory management and strategic decision-making:
-
-```python
-def plan(self, observation: Observation) -> Plan:
-    # Memory management
-    self._update_memory(observation)
-    context = self._get_relevant_context()
-    
-    # Risk assessment
-    risk_level = self._assess_risk(context)
-    if risk_level > self.persona["risk_tolerance"]:
-        return self._generate_conservative_plan(context)
-    
-    # Strategy generation
-    horizon = self.persona["planning_horizon"]
-    steps = self._generate_steps(
-        context,
-        max_steps=horizon,
-        tools=self.persona["tools"]["allowed"]
-    )
-    
-    # Validation
-    self._validate_plan_safety(steps)
-    return Plan(
-        rationale=self._explain_strategy(steps, risk_level),
-        steps=steps,
-        metadata={
-            "risk_assessment": risk_level,
-            "memory_window": self.memory_window,
-            "tool_projections": self._project_tool_usage(steps)
-        }
-    )
-```
-
-Key Components:
-- Memory integration with planning
-- Risk-aware strategy generation
-- Tool usage projection
-- Safety validation
-- Strategy explanation
+Planning should evaluate persona memory (if present), risk tolerance, and tool constraints before emitting a rationale and ordered steps. Treat each blueprint as auditable: explain why every action is proposed and surface projected resource usage where possible.
 
 ### Action Execution
 
-### Action Execution
-
-Actions require careful budget management and safety checks:
-
-```python
-def act(self, plan: Plan, observation: Observation) -> Action:
-    # Budget validation
-    remaining_budget = self._get_remaining_budget()
-    estimated_cost = self._estimate_action_cost(plan)
-    if not self._is_within_budget(estimated_cost, remaining_budget):
-        return self._fallback_action()
-    
-    # Tool selection and validation
-    allowed_tools = self.persona["tools"]["allowed"]
-    tool_selection = self._select_optimal_tool(
-        plan,
-        allowed_tools,
-        budget=remaining_budget,
-        risk_tolerance=self.persona["risk_tolerance"]
-    )
-    
-    # Safety checks
-    if not self._validate_tool_safety(tool_selection):
-        self.logger.warning("Tool safety check failed, using fallback")
-        return self._fallback_action()
-    
-    # Action preparation
-    args = self._prepare_args(
-        plan,
-        observation,
-        tool_selection,
-        safety_bounds=self.persona.get("safety_bounds", {})
-    )
-    
-    # Budget tracking
-    self._record_tool_usage(tool_selection, estimated_cost)
-    
-    return Action(
-        command=tool_selection.name,
-        arguments=args,
-        tool_calls=self._prepare_tool_calls(tool_selection)
-    )
-```
-
-Key Features:
-- Proactive budget management
-- Tool safety validation
-- Fallback mechanisms
-- Usage tracking
-- Safety-bound enforcement
+Actions must revisit remaining budget, validate tool safety, and capture any fallbacks. Record the selected command, arguments, projected cost, and outcome so operators can audit behaviour. If a step violates persona guardrails, use a conservative fallback action and document the reason.
 
 ### Reaction Processing
 
-Reactions provide strategic adjustment:
+Reactions contextualise feedback from the environment. Capture anomalies, adjust persona state (for example risk posture or memory markers), and log the decision. Even when nothing changes, record the “noop” to maintain trace completeness.
 
-```python
-def react(self, observation: Observation, events: list[str]) -> Reaction:
-    # Process feedback
-    unexpected = self._identify_anomalies(observation, events)
-    
-    # Adjust if needed
-    if unexpected:
-        return Reaction(
-            adjustment="Updating risk tolerance",
-            metadata={"confidence": "low"}
-        )
-    return Reaction(adjustment="noop")
+### Composition over Inheritance
 
-## Composition over Inheritance
+- Prefer pipelines of small functions to keep agents composable.
+- Inject cross-cutting concerns (logging, caching, throttling) via higher-order helpers or dependency injection rather than deep hierarchies.
 
-- Prefer small functions and pipelines. Example: research pipeline composes search → summarize → cite.
-- Use higher-order functions to inject concerns (logging, caching, rate-limiting) without coupling.
+## Testing Focus
 
-```
-const withRateLimit = (fn, limiter) => async (...args) => limiter.schedule(() => fn(...args));
-```
-
-## Testing (Vitest)
-
-- Put tests near features (e.g., `tests/test_persona_examples.py`).
-- Test behavior: happy path, one boundary, one failure mode.
-- Keep tests fast and deterministic. Mock environment adapters.
-- Use contract-based tests: plan→act→react cycle validation.
-- Add a tiny smoke test for each new persona type.
-
-Test checklist:
-- Plan respects persona horizon and constraints
-- Actions use only allowed tools within budget
-- Reactions maintain behavioral consistency
-- Logging captures complete step traces
-- Time/memory budgets enforced
+- Co-locate behavioural tests with the feature under test (see `tests/test_evaluation_chain.py` for orchestration coverage).
+- Exercise happy paths, boundaries, and failure recovery while keeping tests deterministic.
+- Mock environment adapters when possible to isolate agent reasoning.
+- Maintain a smoke scenario per persona archetype so regressions surface early.
+- Verify traces capture plan, act, react outputs along with timing and budgets.
 
 ## Observability and Logging
 
@@ -264,11 +129,10 @@ Test checklist:
 
 ## Model Integration (LLM Adapters)
 
-- OpenAI adapter for chat completion endpoints
-- vLLM adapter for local deployment
-- Ollama adapter for open models
-- Rate limiting and budget tracking
-- Streaming support where available
+- OpenAI-style chat, Ollama, and vLLM adapters live under `agents/adapters/` and are exercised by the test suite.
+- The orchestration runtime instantiates LLM planners via `config.agent` on a per-run basis; see `docs/llm_agent_configuration.md` for the full contract.
+- Rate limiting, credential management, and streaming are active workstreams—treat the current integration as the foundation.
+- When calling hosted providers, capture model identifiers, knowledge cutoffs, and citation requirements in persona metadata. Replay the full message history for stateless APIs, encode non-text assets inline, and respect provider guardrails that may emit refusals.
 
 ## Data and Immutability at Boundaries
 
@@ -283,6 +147,8 @@ Test checklist:
 - Reference related guides in `guides/` when helpful.
 - Keep examples updated and runnable.
 - Summarize architecture and behavior only; keep comments concise, precise, timeless, and never use them for TODOs or meta-notes.
+- Communication cues: open responses with a concise acknowledgement tied to the task, keep prose skimmable, mirror user emoji usage rather than initiating it, and ask only one focused clarification question at a time.
+
 
 ## Coding Standards (ESM + async)
 
@@ -296,6 +162,7 @@ Test checklist:
 
 - One intent per PR; keep diffs small and cohesive.
 - Update docs and tests alongside code changes.
+- After material changes, run the pertinent tests or builds yourself, report pass/fail succinctly, and map each explicit requirement to Done or Deferred before handoff.
 - Commit message format:
   - `feat(scope): short summary`
   - `fix(scope): short summary`
@@ -325,6 +192,7 @@ When developing new personas or extending existing ones:
 - Build up from base agent implementations
 - Test across multiple environment types
 - Monitor behavioral consistency metrics
+- Treat external agents or remote collaborators as expert partners with limited visibility: provide complete, current context with every request, avoid assuming access to workspace files or execution results, and flag any facts that may have changed since collection for independent verification
 
 ### Safety Considerations
 

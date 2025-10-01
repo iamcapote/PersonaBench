@@ -1,53 +1,126 @@
 :root {
-  --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
+  /* Color tokens */
+  --surface-0: 215 44% 97%;
+  --surface-1: 220 35% 96%;
+  --surface-2: 222 28% 94%;
+  --surface-3: 222 24% 90%;
+  --ink-900: 225 47% 14%;
+  --ink-800: 227 36% 22%;
+  --ink-600: 225 24% 35%;
+  --ink-400: 220 16% 55%;
+  --ink-200: 216 22% 75%;
+  --ink-100: 214 25% 88%;
+
+  --brand-azure-500: 207 90% 55%;
+  --brand-azure-400: 207 88% 63%;
+  --brand-azure-200: 206 87% 84%;
+  --brand-emerald-500: 160 84% 39%;
+  --brand-emerald-200: 158 74% 80%;
+  --brand-amber-500: 33 94% 55%;
+  --brand-rose-500: 347 77% 55%;
+
+  --background: var(--surface-0);
+  --foreground: var(--ink-900);
 
   --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
+  --card-foreground: var(--ink-900);
   --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
+  --popover-foreground: var(--ink-900);
 
-  --primary: 250 95% 60%;
+  --primary: var(--brand-azure-500);
   --primary-foreground: 0 0% 100%;
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 5.9% 10%;
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
-  --accent: 51 97% 55%;
-  --accent-foreground: 240 10% 3.9%;
-  --destructive: 12 88% 61%;
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--ink-800);
+  --muted: var(--surface-1);
+  --muted-foreground: var(--ink-600);
+  --accent: var(--brand-emerald-500);
+  --accent-foreground: 150 87% 94%;
+  --destructive: var(--brand-rose-500);
   --destructive-foreground: 0 0% 100%;
 
-  --border: 240 5% 90%;
-  --input: 240 5% 90%;
-  --ring: 250 90% 60%;
+  --border: var(--ink-100);
+  --border-strong: var(--ink-200);
+  --input: var(--ink-100);
+  --ring: var(--brand-azure-400);
 
-  --radius: 0.75rem;
+  --shadow-soft: 0 15px 40px -20px rgba(15, 23, 42, 0.25);
+  --shadow-card: 0 18px 44px -24px rgba(15, 23, 42, 0.35);
+
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius: var(--radius-lg);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2rem;
+
+  --line-height-tight: 1.2;
+  --line-height-snug: 1.35;
+  --line-height-base: 1.5;
+  --line-height-relaxed: 1.65;
 }
 
 .dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
+  --surface-0: 220 35% 6%;
+  --surface-1: 220 29% 8%;
+  --surface-2: 220 25% 12%;
+  --surface-3: 220 23% 18%;
+  --ink-900: 214 32% 92%;
+  --ink-800: 210 28% 86%;
+  --ink-600: 215 24% 75%;
+  --ink-400: 218 19% 65%;
+  --ink-200: 220 17% 45%;
+  --ink-100: 220 17% 26%;
 
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
+  --brand-azure-500: 205 92% 70%;
+  --brand-azure-400: 205 92% 60%;
+  --brand-azure-200: 205 86% 44%;
+  --brand-emerald-500: 156 73% 45%;
+  --brand-emerald-200: 156 72% 34%;
+  --brand-amber-500: 33 94% 62%;
+  --brand-rose-500: 347 79% 63%;
 
-  --primary: 250 95% 60%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
+  --background: var(--surface-0);
+  --foreground: var(--ink-900);
 
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 250 95% 60%;
+  --card: var(--surface-1);
+  --card-foreground: var(--ink-900);
+  --popover: var(--surface-1);
+  --popover-foreground: var(--ink-900);
+
+  --primary: var(--brand-azure-500);
+  --primary-foreground: 217 100% 12%;
+  --secondary: var(--surface-3);
+  --secondary-foreground: var(--ink-900);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--ink-400);
+  --accent: var(--brand-emerald-500);
+  --accent-foreground: 156 88% 12%;
+  --destructive: var(--brand-rose-500);
+  --destructive-foreground: 0 0% 100%;
+
+  --border: var(--ink-100);
+  --border-strong: var(--ink-200);
+  --input: var(--ink-100);
+  --ring: var(--brand-azure-400);
+
+  --shadow-soft: 0 25px 55px -30px rgba(15, 23, 42, 0.55);
+  --shadow-card: 0 32px 64px -36px rgba(15, 23, 42, 0.65);
 }
 
 body {

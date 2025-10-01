@@ -6,7 +6,7 @@ import json
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import IO, Any, Dict, Mapping
+from typing import IO, Any, Callable, Dict, Mapping
 
 
 class TraceJSONEncoder(json.JSONEncoder):
@@ -31,6 +31,7 @@ class TraceLogger:
         persona: str | None = None,
         scenario: str | None = None,
         extra_context: Dict[str, Any] | None = None,
+        event_sink: Callable[[Dict[str, Any]], None] | None = None,
     ) -> None:
         self._sink = sink
         base_context = {
@@ -44,6 +45,7 @@ class TraceLogger:
                 if value is not None:
                     self._context[key] = value
         self._tool_usage: Dict[str, int] = {}
+        self._event_sink = event_sink
 
     def log_context(self) -> None:
         payload = {
@@ -137,6 +139,8 @@ class TraceLogger:
         self._sink.flush()
 
     def _write(self, payload: Dict[str, Any]) -> None:
+        if self._event_sink is not None:
+            self._event_sink(dict(payload))
         self._sink.write(json.dumps(payload, cls=TraceJSONEncoder) + "\n")
 
     @classmethod
@@ -145,8 +149,8 @@ class TraceLogger:
         return cls(sink, **kwargs)
 
     @classmethod
-    def null_logger(cls) -> "TraceLogger":
-        return cls(_NullSink())
+    def null_logger(cls, **kwargs) -> "TraceLogger":
+        return cls(_NullSink(), **kwargs)
 
 
 class _NullSink:

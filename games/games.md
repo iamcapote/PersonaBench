@@ -75,3 +75,9 @@ This plan tracks solitaire-style drills and multiplayer card games that exercise
 - Surface deterministic vs stochastic game splits for reproducible comparisons.
 - Provide single vs group leaderboards; group modes record coordination metrics (signaling success, resource sharing).
 - Ensure every card action emits structured events compatible with the evaluation harness.
+
+## 9. Board & Abstract Strategy Pilots
+
+| Game | Mode | Focus | Notes |
+|------|------|-------|-------|
+| Tic-Tac-Toe | Group | Turn-order discipline, invalid-move handling | Implemented as the reference multi-persona engine layered on the new game master; emits structured move events and penalties. |

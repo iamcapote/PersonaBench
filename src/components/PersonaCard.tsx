@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Play, Gear, TrendUp } from "@phosphor-icons/react"
+import { Play, Gear, TrendUp, Code } from "@phosphor-icons/react"
 
 interface PersonaCardProps {
   id: string
@@ -13,6 +13,7 @@ interface PersonaCardProps {
   lastScore?: number
   onRun: (personaId: string) => void
   onEdit: (personaId: string) => void
+  onInspect?: (personaId: string) => void
 }
 
 export function PersonaCard({ 
@@ -24,27 +25,28 @@ export function PersonaCard({
   planningHorizon, 
   lastScore, 
   onRun, 
-  onEdit 
+  onEdit,
+  onInspect,
 }: PersonaCardProps) {
   const getRiskColor = (risk: number) => {
-    if (risk < 0.3) return "bg-green-100 text-green-800 border-green-200"
-    if (risk < 0.7) return "bg-yellow-100 text-yellow-800 border-yellow-200"
-    return "bg-red-100 text-red-800 border-red-200"
+    if (risk < 0.3) return "bg-brand-emerald-200 text-brand-emerald-500 border-transparent"
+    if (risk < 0.7) return "bg-brand-amber-500/20 text-brand-amber-500 border-transparent"
+    return "bg-brand-rose-500/20 text-brand-rose-500 border-transparent"
   }
 
   const getScoreColor = (score: number) => {
-    if (score >= 0.8) return "text-green-600"
-    if (score >= 0.6) return "text-yellow-600"
-    return "text-red-600"
+    if (score >= 0.8) return "text-brand-emerald-500"
+    if (score >= 0.6) return "text-brand-amber-500"
+    return "text-brand-rose-500"
   }
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="border border-border-strong bg-card/95 backdrop-blur-sm transition-transform transition-shadow hover:-translate-y-0.5 hover:shadow-card">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
-            <CardTitle className="text-lg font-semibold">{name}</CardTitle>
-            <CardDescription className="text-sm">{description}</CardDescription>
+            <CardTitle className="text-lg font-semibold text-ink-900">{name}</CardTitle>
+            <CardDescription className="text-sm text-ink-600">{description}</CardDescription>
           </div>
           {lastScore !== undefined && (
             <div className="flex items-center gap-1 text-sm font-mono">
@@ -59,7 +61,7 @@ export function PersonaCard({
       
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-2">
-          <Badge variant="outline" className="text-xs">
+          <Badge variant="outline" className="border-brand-azure-200/60 bg-brand-azure-200/30 text-xs font-medium text-brand-azure-500">
             {archetype}
           </Badge>
           <Badge 
@@ -77,15 +79,26 @@ export function PersonaCard({
           <Button 
             size="sm" 
             onClick={() => onRun(id)}
-            className="flex-1"
+            className="flex-1 justify-center gap-1 bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            <Play size={16} className="mr-1" />
+            <Play size={16} />
             Run Test
           </Button>
+          {onInspect && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onInspect(id)}
+              className="border-border-strong text-ink-600 hover:bg-secondary"
+            >
+              <Code size={16} />
+            </Button>
+          )}
           <Button 
             size="sm" 
             variant="outline" 
             onClick={() => onEdit(id)}
+            className="border-border-strong text-ink-600 hover:bg-secondary"
           >
             <Gear size={16} />
           </Button>

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from .catalog import (
+	CatalogError,
 	get_game,
 	get_persona,
 	get_scenario,
@@ -14,6 +16,7 @@ from .catalog import (
 	list_games,
 	list_personas,
 	list_scenarios,
+	load_game_assets,
 	persona_exists,
 	save_persona,
 	save_scenario,
@@ -22,37 +25,81 @@ from .catalog import (
 )
 from .chains import build_evaluation_chain
 from .schemas import (
+	AuditEvent,
+	AuditEventCreateRequest,
+	EvaluationQueueCreateRequest,
+	EvaluationQueueEntry,
+	EvaluationQueueUpdateRequest,
 	EvaluationRequest,
+	EvaluationResponseDetail,
+	EvaluationResponseSummary,
 	EvaluationResult,
+	ComparisonPair,
+	ComparisonPairRequest,
+	ComparisonVote,
+	ComparisonVoteCreateRequest,
+	ComparisonAggregationResult,
+	GameAssetResponse,
 	GameSummary,
 	PersonaSummary,
 	PersonaUpsertRequest,
 	ScenarioSummary,
 	ScenarioUpsertRequest,
 )
+from .state import (
+	enqueue_evaluation,
+	get_evaluation_response,
+	get_comparison_pair,
+	list_audit_events,
+	list_comparison_pairs,
+	list_evaluation_responses,
+	list_queue_entries,
+	list_comparison_votes,
+	record_audit_event,
+	record_evaluation_response,
+	record_comparison_vote,
+	aggregate_comparison_votes,
+	create_comparison_pair,
+	update_queue_entry,
+)
 
 api_router = APIRouter()
 evaluation_chain = build_evaluation_chain()
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _relative_source_path(value: str | None) -> str | None:
+	if not value:
+		return None
+	path = Path(value)
+	try:
+		return str(path.relative_to(_REPO_ROOT))
+	except ValueError:
+		return str(path)
 
 
 def _persona_summary(raw: dict) -> PersonaSummary:
-	memory = raw.get("memory") or {}
-	tools = raw.get("tools") or {}
+	definition = dict(raw)
+	source_path = definition.pop("_source_path", None)
+	memory = definition.get("memory") or {}
+	tools = definition.get("tools") or {}
 	return PersonaSummary(
-		name=raw.get("name", "unknown"),
-		version=str(raw.get("version", "0")),
-		description=raw.get("description"),
-		risk_tolerance=raw.get("risk_tolerance"),
-		planning_horizon=raw.get("planning_horizon"),
-		deception_aversion=raw.get("deception_aversion"),
+		name=definition.get("name", "unknown"),
+		version=str(definition.get("version", "0")),
+		description=definition.get("description"),
+		risk_tolerance=definition.get("risk_tolerance"),
+		planning_horizon=definition.get("planning_horizon"),
+		deception_aversion=definition.get("deception_aversion"),
 		memory_window=memory.get("window"),
 		tools=list(tools.get("allowed", [])),
-		definition=raw,
+		source_path=_relative_source_path(source_path),
+		definition=definition,
 	)
 
 
 def _scenario_summary(raw: dict) -> ScenarioSummary:
 	tags = list(scenario_tags(raw))
+	source_path = raw.get("path")
 	return ScenarioSummary(
 		key=raw.get("id", "unknown"),
 		title=raw.get("title", raw.get("id", "unknown")),
@@ -60,6 +107,7 @@ def _scenario_summary(raw: dict) -> ScenarioSummary:
 		tags=tags,
 		description=(raw.get("metadata") or {}).get("description"),
 		mode=(raw.get("raw") or {}).get("mode"),
+		source_path=_relative_source_path(source_path),
 		definition=raw.get("raw", {}),
 	)
 
@@ -267,6 +315,278 @@ def read_games() -> List[GameSummary]:
 	return [_game_summary(entry) for entry in list_games()]
 
 
+@api_router.get("/admin/queue", response_model=List[EvaluationQueueEntry])
+def read_evaluation_queue(limit: Optional[int] = Query(None, ge=1, le=500)) -> List[EvaluationQueueEntry]:
+	"""Return the persisted evaluation queue."""
+
+	entries = list_queue_entries(limit=limit)
+	return [EvaluationQueueEntry.model_validate(entry) for entry in entries]
+
+
+@api_router.post(
+	"/admin/queue",
+	response_model=EvaluationQueueEntry,
+	status_code=status.HTTP_201_CREATED,
+)
+def create_queue_entry(request: EvaluationQueueCreateRequest) -> EvaluationQueueEntry:
+	"""Record a new evaluation request in the persistent queue."""
+
+	entry = enqueue_evaluation(
+		persona_id=request.persona_id,
+		target_id=request.target_id,
+		target_kind=request.target_kind,
+		status=request.status or "queued",
+		requested_at=request.requested_at,
+		config=request.config,
+		metadata=request.metadata,
+	)
+	return EvaluationQueueEntry.model_validate(entry)
+
+
+@api_router.patch("/admin/queue/{entry_id}", response_model=EvaluationQueueEntry)
+def update_queue_entry_route(entry_id: str, request: EvaluationQueueUpdateRequest) -> EvaluationQueueEntry:
+	"""Update fields on an existing queue entry."""
+
+	try:
+		payload = update_queue_entry(
+			entry_id,
+			status=request.status,
+			started_at=request.started_at,
+			completed_at=request.completed_at,
+			error=request.error,
+			metadata=request.metadata,
+		)
+	except KeyError as exc:
+		raise HTTPException(
+			status.HTTP_404_NOT_FOUND,
+			detail=f"Queue entry '{entry_id}' not found",
+		) from exc
+
+	return EvaluationQueueEntry.model_validate(payload)
+
+
+@api_router.get("/admin/audit", response_model=List[AuditEvent])
+def read_audit_log(limit: Optional[int] = Query(None, ge=1, le=1000)) -> List[AuditEvent]:
+	"""Return persisted audit log events."""
+
+	events = list_audit_events(limit=limit)
+	return [AuditEvent.model_validate(entry) for entry in events]
+
+
+@api_router.post(
+	"/admin/audit",
+	response_model=AuditEvent,
+	status_code=status.HTTP_201_CREATED,
+)
+def create_audit_log_entry(request: AuditEventCreateRequest) -> AuditEvent:
+	"""Record an audit log event."""
+
+	event = record_audit_event(
+		actor=request.actor,
+		action=request.action,
+		subject=request.subject,
+		status=request.status,
+		timestamp=request.timestamp,
+		metadata=request.metadata,
+	)
+	return AuditEvent.model_validate(event)
+
+
+@api_router.get(
+	"/admin/evaluations/responses",
+	response_model=List[EvaluationResponseSummary],
+)
+def read_evaluation_responses(
+	persona: Optional[str] = Query(None, description="Filter by persona identifier"),
+	target: Optional[str] = Query(None, description="Filter by target identifier"),
+	target_kind: Optional[str] = Query(None, description="Filter by target kind (scenario or game)"),
+	status_filter: Optional[str] = Query(None, description="Filter by evaluation status"),
+	limit: Optional[int] = Query(None, ge=1, le=1000, description="Maximum number of responses to return"),
+) -> List[EvaluationResponseSummary]:
+	"""Return persisted evaluation responses suitable for double-blind review."""
+
+	entries = list_evaluation_responses(
+		persona_id=persona,
+		target_id=target,
+		target_kind=target_kind,
+		status=status_filter,
+		limit=limit,
+	)
+	return [EvaluationResponseSummary.model_validate(entry) for entry in entries]
+
+
+@api_router.get(
+	"/admin/evaluations/responses/{response_id}",
+	response_model=EvaluationResponseDetail,
+)
+def read_evaluation_response(response_id: str) -> EvaluationResponseDetail:
+	"""Return the full payload for a stored evaluation response."""
+
+	entry = get_evaluation_response(response_id)
+	if entry is None:
+		raise HTTPException(
+			status.HTTP_404_NOT_FOUND,
+			detail=f"Evaluation response '{response_id}' not found",
+		)
+	return EvaluationResponseDetail.model_validate(entry)
+
+
+@api_router.get(
+	"/admin/evaluations/pairs",
+	response_model=List[ComparisonPair],
+)
+def read_comparison_pairs(limit: Optional[int] = Query(None, ge=1, le=500)) -> List[ComparisonPair]:
+	"""Return anonymised comparison pairs ready for review."""
+
+	entries = list_comparison_pairs(limit=limit)
+	return [ComparisonPair.model_validate(entry) for entry in entries]
+
+
+@api_router.get(
+	"/admin/evaluations/pairs/{pair_id}",
+	response_model=ComparisonPair,
+)
+def read_comparison_pair(pair_id: str) -> ComparisonPair:
+	"""Return a specific anonymised comparison pair."""
+
+	entry = get_comparison_pair(pair_id)
+	if entry is None:
+		raise HTTPException(
+			status.HTTP_404_NOT_FOUND,
+			detail=f"Comparison pair '{pair_id}' not found",
+		)
+	return ComparisonPair.model_validate(entry)
+
+
+@api_router.post(
+	"/admin/evaluations/pairs",
+	response_model=ComparisonPair,
+	status_code=status.HTTP_201_CREATED,
+)
+def create_comparison_pair_route(request: ComparisonPairRequest) -> ComparisonPair:
+	"""Generate a new anonymised comparison pair from stored responses."""
+
+	status_filter = request.status or "completed"
+	try:
+		payload = create_comparison_pair(
+			target_id=request.target_id,
+			target_kind=request.target_kind,
+			status=status_filter,
+			exclude_responses=request.exclude_responses,
+		)
+	except ValueError as exc:
+		raise HTTPException(
+			status.HTTP_404_NOT_FOUND,
+			detail=str(exc),
+		) from exc
+	return ComparisonPair.model_validate(payload)
+
+
+@api_router.get(
+	"/admin/evaluations/votes",
+	response_model=List[ComparisonVote],
+)
+def read_comparison_votes(
+	pair: Optional[str] = Query(None, description="Restrict results to a specific comparison pair"),
+	limit: Optional[int] = Query(None, ge=1, le=5000, description="Maximum number of votes to return"),
+) -> List[ComparisonVote]:
+	"""Return recorded reviewer votes across comparison pairs."""
+
+	entries = list_comparison_votes(pair_id=pair, limit=limit)
+	return [ComparisonVote.model_validate(entry) for entry in entries]
+
+
+@api_router.get(
+	"/admin/evaluations/pairs/{pair_id}/votes",
+	response_model=List[ComparisonVote],
+)
+def read_comparison_pair_votes(
+	pair_id: str,
+	limit: Optional[int] = Query(None, ge=1, le=5000, description="Maximum number of votes to return"),
+) -> List[ComparisonVote]:
+	"""Return votes recorded for a specific comparison pair."""
+
+	entries = list_comparison_votes(pair_id=pair_id, limit=limit)
+	return [ComparisonVote.model_validate(entry) for entry in entries]
+
+
+@api_router.post(
+	"/admin/evaluations/pairs/{pair_id}/votes",
+	response_model=ComparisonVote,
+	status_code=status.HTTP_201_CREATED,
+)
+def create_comparison_vote_route(pair_id: str, request: ComparisonVoteCreateRequest) -> ComparisonVote:
+	"""Record a reviewer preference for a comparison pair."""
+
+	try:
+		payload = record_comparison_vote(
+			pair_id=pair_id,
+			winner_slot=request.winner_slot,
+			reviewer=request.reviewer,
+			rationale=request.rationale,
+			confidence=request.confidence,
+			metadata=request.metadata,
+		)
+	except KeyError as exc:
+		raise HTTPException(
+			status.HTTP_404_NOT_FOUND,
+			detail=str(exc),
+		) from exc
+	except ValueError as exc:
+		raise HTTPException(
+			status.HTTP_422_UNPROCESSABLE_CONTENT,
+			detail=str(exc),
+		) from exc
+
+	return ComparisonVote.model_validate(payload)
+
+
+@api_router.get(
+	"/admin/evaluations/aggregate",
+	response_model=ComparisonAggregationResult,
+)
+def read_comparison_aggregation(
+	target: Optional[str] = Query(None, description="Filter aggregation by scenario or game identifier"),
+	target_kind: Optional[str] = Query(None, description="Restrict aggregation to scenario or game votes"),
+	adapter: Optional[str] = Query(None, description="Restrict aggregation to a specific adapter"),
+) -> ComparisonAggregationResult:
+	"""Return Bradley–Terry rankings computed from stored comparison votes."""
+
+	if target_kind is not None and target_kind not in {"scenario", "game"}:
+		raise HTTPException(
+			status.HTTP_422_UNPROCESSABLE_CONTENT,
+			detail="target_kind must be either 'scenario' or 'game'",
+		)
+
+	payload = aggregate_comparison_votes(
+		target_id=target,
+		target_kind=target_kind,
+		adapter=adapter,
+	)
+	return ComparisonAggregationResult.model_validate(payload)
+
+
+@api_router.get("/games/{game_id}/assets", response_model=GameAssetResponse)
+def read_game_assets(game_id: str) -> GameAssetResponse:
+	"""Return transparency assets (manifests, rules, adapters) for a game."""
+
+	if get_game(game_id) is None:
+		raise HTTPException(
+			status.HTTP_404_NOT_FOUND,
+			detail=f"Game '{game_id}' not found",
+		)
+
+	try:
+		assets = load_game_assets(game_id)
+	except CatalogError as exc:  # pragma: no cover - defensive guard
+		raise HTTPException(
+			status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail=str(exc),
+		) from exc
+
+	return GameAssetResponse.model_validate(assets)
+
+
 @api_router.post(
 	"/evaluations",
 	response_model=EvaluationResult,
@@ -312,5 +632,31 @@ def create_evaluation(request: EvaluationRequest) -> EvaluationResult:
 		)
 
 	status_value = str(result.get("status", "pending"))
+	run_id = str(result.get("run_id") or "")
+	persona_identifier = str(persona.get("name") or request.persona)
+	target_identifier = str(target_entry.get("id", request.scenario))
+	adapter_name = str(
+		result.get("adapter")
+		or target_entry.get("environment")
+		or target_entry.get("family")
+		or ""
+	)
+	metadata = {
+		"persona_version": persona.get("version"),
+		"target_title": target_entry.get("title") or target_entry.get("name"),
+		"config": dict(request.config),
+	}
+	record_evaluation_response(
+		run_id=run_id,
+		persona_id=persona_identifier,
+		target_id=target_identifier,
+		target_kind=target_kind,
+		adapter=adapter_name,
+		status=status_value,
+		summary=result.get("summary") or {},
+		steps=result.get("steps") or [],
+		trace=result.get("trace") or [],
+		metadata=metadata,
+	)
 
 	return EvaluationResult(status=status_value, details=result)

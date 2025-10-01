@@ -1,8 +1,10 @@
 agents
 bench
 docker
+games
 harness
 leaderboard
+orchestration
 personas
 scenarios
 tests

@@ -1,0 +1,13 @@
+id: tic-tac-toe-practice
+mode: match
+checks:
+  type: noop
+metadata:
+  description: "Two personas play a complete game of tic-tac-toe using the shared game master."
+  domain: games
+  tags:
+    - tic-tac-toe
+    - board-games
+    - strategy
+  difficulty: easy
+  estimated_time: 2

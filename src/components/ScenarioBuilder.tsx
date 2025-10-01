@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { FloppyDisk, X, Plus, Trash } from "@phosphor-icons/react"
+import { dump as yamlDump } from "js-yaml"
 
 interface EvaluationCriterion {
   id: string
@@ -107,6 +108,84 @@ export function ScenarioBuilder({ scenario, onSave, onCancel }: ScenarioBuilderP
 
   const [newTag, setNewTag] = useState("")
   const [activeTab, setActiveTab] = useState("basic")
+
+  const slugifyIdentifier = (value: string, fallback: string) => {
+    const normalized = value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+    return normalized.length > 0 ? normalized : fallback
+  }
+
+  const cleanedContent = useMemo(() => {
+    const setupSteps = formData.setupSteps.filter((step) => step.trim() !== "")
+    const constraints = formData.constraints.filter((entry) => entry.trim() !== "")
+    const criteria = formData.evaluationCriteria
+      .map((criterion, index) => ({
+        id: criterion.id || `criterion-${index + 1}`,
+        name: criterion.name.trim(),
+        description: criterion.description.trim(),
+        weight: Number.isFinite(criterion.weight) ? Number(criterion.weight) : 0,
+        type: criterion.type,
+      }))
+      .filter((criterion) => criterion.name.length > 0)
+
+    const metadata: Record<string, unknown> = {
+      title: formData.name || "Untitled Scenario",
+      description: formData.description,
+      domain: formData.domain,
+      difficulty: formData.difficulty,
+      estimated_time: formData.estimatedTime,
+      tags: formData.tags,
+    }
+
+    if (formData.expectedOutputFormat) {
+      metadata.expected_output = formData.expectedOutputFormat
+    }
+
+    if (formData.context) {
+      metadata.context = formData.context
+    }
+
+    return {
+      setupSteps,
+      constraints,
+      criteria,
+      metadata,
+    }
+  }, [formData])
+
+  const previewDefinition = useMemo(() => {
+    const scenarioId = slugifyIdentifier(formData.name || scenario?.name || "custom-scenario", "scenario")
+    const evaluationBlock = cleanedContent.criteria.length > 0 ? { criteria: cleanedContent.criteria } : undefined
+
+    const baseDefinition: Record<string, unknown> = {
+      id: scenario?.id ?? scenarioId,
+      mode: "simulation",
+      metadata: cleanedContent.metadata,
+      instructions: formData.instructions,
+      setup_steps: cleanedContent.setupSteps,
+      constraints: cleanedContent.constraints,
+    }
+
+    if (evaluationBlock) {
+      baseDefinition.evaluation = evaluationBlock
+    }
+
+    return baseDefinition
+  }, [cleanedContent, formData.instructions, formData.name, scenario?.id, scenario?.name])
+
+  const previewJson = useMemo(() => JSON.stringify(previewDefinition, null, 2), [previewDefinition])
+
+  const previewYaml = useMemo(() => {
+    try {
+      return yamlDump(previewDefinition, { noRefs: true })
+    } catch (error) {
+      console.error(error)
+      return "# Unable to render YAML preview"
+    }
+  }, [previewDefinition])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -221,11 +300,12 @@ export function ScenarioBuilder({ scenario, onSave, onCancel }: ScenarioBuilderP
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="basic">Basic Info</TabsTrigger>
                 <TabsTrigger value="instructions">Instructions</TabsTrigger>
                 <TabsTrigger value="evaluation">Evaluation</TabsTrigger>
                 <TabsTrigger value="advanced">Advanced</TabsTrigger>
+                <TabsTrigger value="preview">Preview</TabsTrigger>
               </TabsList>
 
               <TabsContent value="basic" className="space-y-4">
@@ -481,6 +561,30 @@ export function ScenarioBuilder({ scenario, onSave, onCancel }: ScenarioBuilderP
                     <li>Custom evaluation scripts</li>
                     <li>Integration settings for external tools</li>
                   </ul>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="preview" className="space-y-4">
+                <div>
+                  <Label>Scenario JSON Definition</Label>
+                  <Card className="border-dashed">
+                    <CardContent className="py-4">
+                      <pre className="max-h-72 overflow-auto rounded bg-muted p-4 text-xs leading-relaxed">
+{previewJson}
+                      </pre>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div>
+                  <Label>Scenario YAML Definition</Label>
+                  <Card className="border-dashed">
+                    <CardContent className="py-4">
+                      <pre className="max-h-72 overflow-auto rounded bg-muted p-4 text-xs leading-relaxed">
+{previewYaml}
+                      </pre>
+                    </CardContent>
+                  </Card>
                 </div>
               </TabsContent>
             </Tabs>

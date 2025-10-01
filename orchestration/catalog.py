@@ -31,6 +31,8 @@ def _load_personas() -> Dict[str, Dict[str, Any]]:
         with path.open("r", encoding="utf-8") as handle:
             data = json.load(handle)
         name = data.get("name") or path.stem
+        data = dict(data)
+        data["_source_path"] = str(path)
         personas[name] = data
     return personas
 
@@ -71,6 +73,7 @@ def _load_scenarios() -> Dict[str, Dict[str, Any]]:
             "environment": environment,
             "metadata": metadata,
             "raw": data,
+            "path": str(yaml_path),
         }
     return scenarios
 
@@ -111,6 +114,7 @@ def _load_games() -> Dict[str, Dict[str, Any]]:
             "family": family,
             "metadata": metadata,
             "raw": data,
+            "path": str(yaml_path),
         }
     return games
 
@@ -125,6 +129,97 @@ def get_game(game_id: str) -> Optional[Dict[str, Any]]:
     """Return a game entry if present."""
 
     return _load_games().get(game_id)
+
+
+def _relative_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
+def _resolve_rule_pack_path(manifest_path: Path) -> Path | None:
+    candidates = [
+        manifest_path.with_name("rules.yaml"),
+        manifest_path.with_name("rules.yml"),
+        manifest_path.with_name("rules.json"),
+        manifest_path.with_name("rules.md"),
+        manifest_path.parent / "rules.yaml",
+        manifest_path.parent / "rules.yml",
+        manifest_path.parent / "rules.json",
+        manifest_path.parent / "rules.md",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _resolve_adapter_path(entry: Dict[str, Any]) -> Path | None:
+    family = entry.get("family")
+    if not isinstance(family, str) or not family:
+        return None
+    adapter_path = ROOT / "bench" / "adapters" / family / "adapter.py"
+    if adapter_path.exists():
+        return adapter_path
+    return None
+
+
+def load_game_assets(game_id: str) -> Dict[str, Dict[str, Any]]:
+    """Return manifest, rule pack, and adapter source for the requested game."""
+
+    entry = get_game(game_id)
+    if entry is None:
+        raise CatalogError(f"Game '{game_id}' not found")
+
+    raw_path = entry.get("path")
+    if not raw_path:
+        raise CatalogError(f"Game '{game_id}' is missing a manifest path")
+
+    manifest_path = Path(raw_path)
+    if not manifest_path.exists():
+        raise CatalogError(f"Game manifest missing on disk: {manifest_path}")
+
+    manifest_content = manifest_path.read_text(encoding="utf-8")
+    rule_path = _resolve_rule_pack_path(manifest_path)
+    rule_content = rule_path.read_text(encoding="utf-8") if rule_path else None
+    adapter_path = _resolve_adapter_path(entry)
+    adapter_content = adapter_path.read_text(encoding="utf-8") if adapter_path else None
+
+    payload: Dict[str, Dict[str, Any]] = {
+        "manifest": {
+            "path": _relative_path(manifest_path),
+            "language": _language_hint(manifest_path.suffix),
+            "content": manifest_content,
+        }
+    }
+
+    if rule_path and rule_content is not None:
+        payload["rule_pack"] = {
+            "path": _relative_path(rule_path),
+            "language": _language_hint(rule_path.suffix),
+            "content": rule_content,
+        }
+
+    if adapter_path and adapter_content is not None:
+        payload["adapter"] = {
+            "path": _relative_path(adapter_path),
+            "language": "python",
+            "content": adapter_content,
+        }
+
+    return payload
+
+
+def _language_hint(suffix: str) -> str:
+    suffix = suffix.lstrip(".").lower()
+    if suffix in {"yaml", "yml"}:
+        return "yaml"
+    if suffix in {"json"}:
+        return "json"
+    if suffix in {"md", "markdown"}:
+        return "markdown"
+    return "text"
 
 
 def scenario_tags(entry: Dict[str, Any]) -> Iterable[str]:

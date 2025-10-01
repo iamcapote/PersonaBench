@@ -11,7 +11,7 @@ This plan outlines actionable next steps for developing and improving PersonaBen
   - [x] Add LangChain + FastAPI dependencies to the Python package (update `pyproject.toml`).
   - [x] Implement LangChain `Runnable` wrappers around persona agents and environment adapters (see `orchestration/chains.py`).
   - [x] Scaffold `/api/personas`, `/api/scenarios`, `/api/evaluations` endpoints that invoke LangChain chains.
-  - [ ] Extend evaluation chain with async execution, trace streaming, and richer harness wiring.
+   - [x] Extend evaluation chain with async execution, trace streaming, and richer harness wiring.
 
 ### 2. Admin & Operator Experience
 - **Objective**: Deliver authenticated UI and APIs for managing personas, scenarios, and evaluation runs.
@@ -20,36 +20,83 @@ This plan outlines actionable next steps for developing and improving PersonaBen
   - Update the React app with admin tabs for library, queue, and audit logs; migrate persistence from client-only storage to service calls.
   - [x] Document workflow roles (operator, reviewer) and authorization requirements (see `docs/operator_roles.md`).
   - Design a drag-and-drop (DnD) builder that lets operators create and save personas, scenarios, and rule variants with inline previews of the underlying JSON/YAML.
-  - Surface game manifests, rule packs, and adapter code snippets directly in the UI so users can inspect mechanics before running evaluations.
-  - Add guided transparency tooling (side-by-side code + UI) so every change to games or personas can be traced back to source files.
+  - [x] Surface game manifests, rule packs, and adapter code snippets directly in the UI so users can inspect mechanics before running evaluations.
+  - [x] Add guided transparency tooling (side-by-side code + UI) so every change to games or personas can be traced back to source files.
+    - Persona/Game transparency panels now render source paths and raw definitions (`PersonaTransparencyPanel`, `ScenarioTransparencyPanel`, `GameTransparencyPanel`).
+    - React app wires inspect actions back to orchestration metadata.
 
-### 3. Double-Blind Feedback Pipeline
+### 3. Frontend Comparison & Utility UI Refresh
+- **Objective**: Replace the prototype UI with a clarity-first, operator-focused experience inspired by modern model leaderboards, analytics hubs, and tabletop dashboards provided in the design references.
+- **Guiding Principles**:
+  - Prioritize comprehension over chrome: every screen should explain what the user is looking at, why it matters, and what to do next.
+  - Treat comparisons as first-class: side-by-side evaluation, pricing, and performance views must sit one click away from any persona or run.
+  - Borrow proven layouts: combine dense summary headers (leaderboards), multi-panel comparisons (llmarena, Adaptive Reasoning chart), and modular stat cards (DnD dashboards) to keep information scannable.
+- **Tasks**:
+  1. **Information Architecture Overhaul**
+    - Consolidate navigation into "Runs", "Compare", "Personas", and "Scenarios" hubs.
+    - Introduce a persistent context rail with the active persona, scenario, and evaluation status so users never lose track of scope.
+    - Split setup versus analysis flows: wizard-style creation (left rail) and dashboard-style review (full-width, card-based).
+  2. **Comparison Workspace**
+    - Build a sticky comparison header showing aggregate intelligence, cost, latency, and risk in a matrix similar to the llmarena comparison sheet.
+    - Provide toggleable visualizations: bar/box charts for score distributions (echoing the DnD stats box plot) and heatmaps for volatility and cooperation metrics.
+    - Support flexible cohort selection with chips + filters for provider, modality, context window, and budget.
+    - [x] Replace the `ResultsAnalytics` head-to-head tab with a live persona comparison matrix (win-rate + score edge) derived from shared scenarios.
+  3. **Persona & Scenario Detail Modules**
+    - Design card templates mirroring the Notion-style persona sheets: key stats on the left, expandable tabs for memory/tools/logs on the right.
+    - Embed rule previews and adapter snippets inline with tabs instead of separate pages to reduce navigation churn.
+  4. **Run Playback & Transparency Tools**
+    - Add timeline components with collapsible steps (plan → act → react) and quick diff links back to source files.
+    - Surface trace logs in a side drawer with filters for tool calls, budget events, and anomalies.
+  5. **Design System Definition**
+    - Establish tokens for typography, spacing, and color that match the updated brand direction (dark-on-slate with accent blues/greens derived from the reference dashboards).
+    - Standardize card, table, and chart patterns; document usage in Storybook before wiring to live data.
+  6. **Implementation Roadmap**
+    - Phase 1: Wireframe + Storybook for base components (comparison table, stat cards, persona drawer).
+    - Phase 2: Integrate with existing FastAPI endpoints, replacing mock data incrementally.
+    - Phase 3: Usability validation with operators; bake findings into polish sprint (empty states, loading skeletons, accessibility).
+
+### 4. Double-Blind Feedback Pipeline
 - **Objective**: Capture human preference data by presenting cached persona responses side-by-side.
 - **Tasks**:
-  - Persist evaluation responses in a queryable store (e.g., Postgres, DuckDB, s3-backed JSONL).
-  - Build pairing logic + APIs for retrieving anonymized `A/B` comparisons.
+  - [x] Persist evaluation responses in a queryable store (initial JSON-backed persistence with admin APIs for review).
+  - [x] Build pairing logic + APIs for retrieving anonymized `A/B` comparisons.
   - Create reviewer UI flow, storage for votes, and Bradley–Terry aggregation job.
+    - [x] Persist reviewer votes with admin APIs (state helpers, validation, testing).
+    - [ ] Deliver reviewer-facing UI for collecting preferences.
+  - [x] Implement Bradley–Terry aggregation job and reporting endpoints.
 
-### 4. Model Comparison Analytics
+### 5. Model Comparison Analytics
 - **Objective**: Provide meaningful persona + adapter comparisons across new metric families.
 - **Tasks**:
   - Extend `bench/eval/metrics.py` with expected value, cooperation rate, red flag rate, and volatility penalties.
+   - [x] Extend `bench/eval/metrics.py` with expected value, cooperation rate, red flag rate, and volatility penalties.
   - Persist metrics in structured tables and expose comparison endpoints.
   - Enhance frontend dashboards with heatmaps/radar charts and regression alerts.
 
-### 5. Text-Based Scenario Suite
+### 6. Text-Based Scenario Suite
 - **Objective**: Introduce lightweight card/negotiation games that run entirely in Python.
 - **Tasks**:
   - [x] Implement solitaire and heads-up poker adapters under `bench/adapters/` with deterministic seeds (see `bench/adapters/solitaire/adapter.py` and `bench/adapters/poker/adapter.py`).
   - [x] Add manifests under `scenarios/` and corresponding tests (`games/poker/practice.yaml`, `tests/test_heads_up_poker_adapter.py`).
   - [x] Document scenario playbooks in `docs/scenarios/` (see updated poker section in `docs/scenarios/playbooks.md`).
 
-### 6. Enhance Logging and Observability
+### 7. Enhance Logging and Observability
 - **Objective**: Improve `TraceLogger` and surrounding tooling to support service deployment.
 - **Tasks**:
   - Add run IDs, persona/scenario metadata, and tool usage summaries to logs.
   - Emit structured events suitable for both local debugging and centralized logging.
   - Write tests to validate logging behavior end-to-end.
+   - [x] Add run IDs, persona/scenario metadata, and tool usage summaries to logs.
+   - [x] Emit structured events suitable for both local debugging and centralized logging.
+   - [x] Write tests to validate logging behavior end-to-end.
+
+### 8. Game Master Engine & Multi-Persona Play
+- **Objective**: Provide a reusable orchestration layer so multiple persona agents can compete within real game engines.
+- **Tasks**:
+  - [x] Introduce the core `GameMaster` with `TurnBasedGame` interface and `MatchRunner` harness to coordinate turn-by-turn agent play.
+  - [x] Implement a production-grade `TicTacToeGame` engine that enforces legal moves, scoring, and structured events.
+  - [x] Add tic-tac-toe match configs plus automated tests covering invalid moves and full-game completion.
+  - Integrate existing blackjack/poker adapters with the game master for true multi-persona play.
 
 ## Current State of the App
 - 📝 Schema validation: Working

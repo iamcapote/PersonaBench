@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Iterable, Optional
+from typing import Callable, Iterable, Optional
 
 from .logging import TraceLogger
 from .types import Action, Observation, Plan, Reaction, StepResult
@@ -31,8 +31,12 @@ class PersonaAgent(ABC):
         del observation, events
         return Reaction(adjustment="noop")
 
-    def step(self, observation: Observation, adapter: "EnvAdapter") -> StepResult:
-        """Perform a single plan→act→react iteration against an environment adapter."""
+    def perform_iteration(
+        self,
+        observation: Observation,
+        executor: Callable[[Action], StepResult],
+    ) -> StepResult:
+        """Run a single perception→plan→act→react loop using a custom executor."""
 
         plan = self.plan(observation)
         self._trace_logger.log_plan(self.name, plan)
@@ -40,13 +44,18 @@ class PersonaAgent(ABC):
         action = self.act(plan, observation)
         self._trace_logger.log_action(self.name, action)
 
-        result = adapter.execute(action)
+        result = executor(action)
         self._trace_logger.log_step_result(self.name, result)
 
         reaction = self.react(result.observation, [event.name for event in result.events])
         self._trace_logger.log_reaction(self.name, reaction)
 
         return result
+
+    def step(self, observation: Observation, adapter: "EnvAdapter") -> StepResult:
+        """Perform a single plan→act→react iteration against an environment adapter."""
+
+        return self.perform_iteration(observation, adapter.execute)
 
 
 class EnvAdapter(ABC):

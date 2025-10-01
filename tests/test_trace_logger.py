@@ -81,3 +81,23 @@ def test_trace_logger_step_result_contains_events() -> None:
     reaction_record = _strip_timestamps(records[1])
     assert reaction_record["event"] == "reaction"
     assert reaction_record["payload"]["adjustment"] == "noop"
+
+
+def test_trace_logger_event_sink_receives_events() -> None:
+    buffer = io.StringIO()
+    captured: list[dict] = []
+
+    logger = TraceLogger(
+        buffer,
+        run_id="run-xyz",
+        event_sink=captured.append,
+    )
+
+    logger.log_context()
+    logger.log_action("agent", Action(command="noop"))
+    logger.log_tool_summary()
+
+    assert len(captured) >= 3
+    assert captured[0]["event"] == "context"
+    assert captured[0]["run_id"] == "run-xyz"
+    assert captured[-1]["event"] == "tool_summary"

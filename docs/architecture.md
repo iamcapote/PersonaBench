@@ -1,21 +1,21 @@
 # PersonaBench Architecture & Status
 
-_Last updated: 2025-09-29_
+_Last updated: 2025-09-30_
 
 ## System Surfaces
 
 | Surface | Tech Stack | Current Capability | Notes |
 | --- | --- | --- | --- |
-| Python backend | `bench/`, `agents/`, `harness/` packages | Implements plan→act→react contract, adapters for supported simulators, evaluation metrics, CLI harness | LangChain + FastAPI orchestration service (see [`orchestration/`](../orchestration/)) publishes personas/scenarios/games APIs |
+| Python backend | `bench/`, `agents/`, `harness/` packages | Implements plan→act→react contract, adapters for supported simulators, evaluation metrics, CLI + match harness | LangChain + FastAPI orchestration service (see [`orchestration/`](../orchestration/)) publishes personas/scenarios/games APIs; shared `GameMaster` orchestrates multi-persona matches |
 | React frontend | `src/` (Vite + React + Tailwind) | Persona editor, scenario selector, mock evaluation runner, results gallery | Hydrates personas, scenarios, and games from orchestration service; evaluation wiring still mocked |
 | Docs & governance | `README.md`, `PRD.md`, `AGENTS.md`, `completion_plan.md`, `games/games.md`, `dnd.md` | High-level goals, games roadmap, and scenario spec | Tracks split between logic games and emergent D&D-style scenarios |
 
 ## Integration Gaps
 
 1. **LangChain orchestration layer**
-   - Minimal FastAPI + LangChain scaffolding is in place (catalog APIs + placeholder evaluation chain).
-   - Required work: replace the echo chain with real persona+scenario execution, stream trace logs, and harden error handling.
-   - Implication: frontend still cannot launch full evaluations until chain orchestration and authentication land.
+   - FastAPI + LangChain scaffolding now exposes catalog endpoints and wraps the rollout harness.
+   - Required work: route match-based evaluations (via `GameMaster`) through the service, stream trace logs, and harden error handling.
+   - Implication: frontend still cannot launch full evaluations until authentication and streaming guards land.
 
 2. **Operator/Admin tooling**
    - Frontend lacks authenticated flows, persona library management, scenario curation, or run scheduling UI.
@@ -29,10 +29,10 @@ _Last updated: 2025-09-29_
    - No mechanism to capture human preferences. Desired flow: double-blind A/B where two persona responses are cached and users select a winner.
    - Requires storage (e.g., Postgres, DuckDB, or even local JSONL) and processes for replaying experiments into aggregate metrics.
 
-5. **Scenario expansion**
-   - Card **games** (solitaire, blackjack, poker) now live under `games/` as logic/game-theory drills; see [`games/games.md`](../games/games.md).
+5. **Scenario expansion & match coverage**
+   - Card **games** (solitaire, blackjack, poker) and the new tic-tac-toe engine live under `games/` as logic/game-theory drills; see [`games/games.md`](../games/games.md).
    - **Scenarios** remain the arena for emergent, reactionary evaluation: existing OSWorld/WebArena/Tales manifests plus the D&D benchmark described in [`dnd.md`](../dnd.md).
-   - Need lightweight engines for both tracks so we can cover deterministic drills and complex worlds without external dependencies.
+   - Need to backfill blackjack and poker adapters with `TurnBasedGame` wrappers so they can participate in multi-persona matches, while continuing to author lightweight deterministic engines for future drills.
 
 ## Recommended Backend Plan
 
@@ -106,7 +106,7 @@ All new metrics must map to persona/scenario IDs and support aggregation.
 1. Add LangChain + FastAPI scaffolding and capture controller architecture in this document.
 2. Stand up service APIs for personas, scenarios, and evaluation runs.
 3. Implement storage + API contracts for human feedback and model comparison data.
-4. Build text-only card game adapters and corresponding scenario manifests.
+4. Wrap blackjack and poker adapters with the `GameMaster`, then scale to additional text-first board/card engines with manifests and deterministic tests.
 5. Align frontend roadmap with backend APIs via shared OpenAPI/JSON schema definitions.
 
 Progress on these items should be mirrored in `completion_plan.md` and surfaced via milestone tracking.
