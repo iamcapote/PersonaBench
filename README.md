@@ -60,11 +60,15 @@ Refer to [`docs/architecture.md`](docs/architecture.md) for a deeper dive into t
 
 ### LangChain Integration
 
-PersonaBench uses LangChain as its orchestration layer, wrapping the plan→act→react harness in `RunnableLambda` primitives that support synchronous, asynchronous, and streaming execution. For comprehensive documentation on the LangChain integration:
+PersonaBench uses LangChain as its orchestration layer, wrapping the plan→act→react harness in `RunnableLambda` primitives that support synchronous, asynchronous, and streaming execution. 
 
-- **[LangChain Migration Guide](docs/langchain_migration_guide.md)**: Complete architecture overview, design patterns, migration checklist, and troubleshooting guide
-- **[LangChain Examples](docs/langchain_examples.md)**: Production-ready code examples for adapters, routes, schemas, state management, and background jobs
-- **[LangChain Service](docs/langchain_service.md)**: High-level service architecture and API design
+📚 **[Complete LangChain Documentation Index](docs/langchain_index.md)** - Start here for all LangChain resources
+
+#### Quick Links
+
+- **[Quick Start Guide](docs/langchain_quickstart.md)**: Get started in 15 minutes - installation, first evaluation, and common tasks
+- **[Migration Guide](docs/langchain_migration_guide.md)**: Complete architecture overview, design patterns, migration checklist, and troubleshooting guide
+- **[Code Examples](docs/langchain_examples.md)**: Production-ready code examples for adapters, routes, schemas, state management, and background jobs
 - **[LLM Agent Configuration](docs/llm_agent_configuration.md)**: Guide for integrating LLM-backed planning with OpenAI, Ollama, and vLLM
 
 ## Near-Term Priorities
