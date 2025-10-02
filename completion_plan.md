@@ -11,7 +11,8 @@ This plan outlines actionable next steps for developing and improving PersonaBen
   - [x] Add LangChain + FastAPI dependencies to the Python package (update `pyproject.toml`).
   - [x] Implement LangChain `Runnable` wrappers around persona agents and environment adapters (see `orchestration/chains.py`).
   - [x] Scaffold `/api/personas`, `/api/scenarios`, `/api/evaluations` endpoints that invoke LangChain chains.
-   - [x] Extend evaluation chain with async execution, trace streaming, and richer harness wiring.
+  - [x] Extend evaluation chain with async execution, trace streaming, and richer harness wiring.
+  - [x] Create comprehensive LangChain migration guide with architecture, patterns, and examples (see `docs/langchain_migration_guide.md` and `docs/langchain_examples.md`).
 
 ### 2. Admin & Operator Experience
 - **Objective**: Deliver authenticated UI and APIs for managing personas, scenarios, and evaluation runs.

@@ -58,6 +58,15 @@ Borrow the structure when designing dashboards: lead with identity, cluster quan
 
 Refer to [`docs/architecture.md`](docs/architecture.md) for a deeper dive into the intended integration between these surfaces and the outstanding work required to bridge them, and [`docs/evaluation_design.md`](docs/evaluation_design.md) for the evaluation/feedback roadmap.
 
+### LangChain Integration
+
+PersonaBench uses LangChain as its orchestration layer, wrapping the plan→act→react harness in `RunnableLambda` primitives that support synchronous, asynchronous, and streaming execution. For comprehensive documentation on the LangChain integration:
+
+- **[LangChain Migration Guide](docs/langchain_migration_guide.md)**: Complete architecture overview, design patterns, migration checklist, and troubleshooting guide
+- **[LangChain Examples](docs/langchain_examples.md)**: Production-ready code examples for adapters, routes, schemas, state management, and background jobs
+- **[LangChain Service](docs/langchain_service.md)**: High-level service architecture and API design
+- **[LLM Agent Configuration](docs/llm_agent_configuration.md)**: Guide for integrating LLM-backed planning with OpenAI, Ollama, and vLLM
+
 ## Near-Term Priorities
 
 1. **Game master integrations**: Extend the shared `GameMaster` to cover blackjack and poker adapters, surface match metadata in orchestration APIs, and expose structured logs to the UI.
