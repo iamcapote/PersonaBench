@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import { ComparisonPairPayload, TargetSelection } from "./types";
+import { useAdminAuth } from "@/components/app/providers/AdminAuthProvider";
 
 const normalizePair = (payload: ComparisonPairPayload): ComparisonPairPayload => ({
   ...payload,
@@ -26,6 +27,7 @@ export const useComparisonPairs = (): UseComparisonPairsResult => {
   const [currentPair, setCurrentPair] = useState<ComparisonPairPayload | null>(null);
   const [loadingPair, setLoadingPair] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { authorizedApiFetch, hasAdminAccess } = useAdminAuth();
 
   const clearPair = useCallback(() => {
     setCurrentPair(null);
@@ -44,7 +46,14 @@ export const useComparisonPairs = (): UseComparisonPairsResult => {
         payload.target_kind = selection.kind;
       }
 
-      const response = await fetch("/admin/evaluations/pairs", {
+      if (!hasAdminAccess) {
+        const message = "Admin key required to request comparison pairs.";
+        setError(message);
+        toast.warning(message);
+        return { pair: null, status: "error" };
+      }
+
+  const response = await authorizedApiFetch("/admin/evaluations/pairs", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -80,7 +89,7 @@ export const useComparisonPairs = (): UseComparisonPairsResult => {
     } finally {
       setLoadingPair(false);
     }
-  }, []);
+  }, [authorizedApiFetch, hasAdminAccess]);
 
   return {
     currentPair,

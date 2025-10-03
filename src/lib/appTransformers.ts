@@ -2,8 +2,12 @@ import { formatTimestamp as formatTimestampValue } from "@/lib/formatters"
 import type {
   AuditEvent,
   AuditEventResponse,
+  EvaluationEvent,
+  EvaluationEventResponse,
   EvaluationQueueItem,
   EvaluationQueueResponse,
+  EvaluationQueueSummary,
+  EvaluationQueueSummaryResponse,
   EvaluationQueueStatus,
   GameAssetResponseApi,
   GameAssets,
@@ -351,6 +355,40 @@ export const transformQueueEntryResponse = (entry: EvaluationQueueResponse): Eva
     completedAt: entry.completed_at ?? undefined,
     error: entry.error ?? undefined,
     metadata: entry.metadata ?? undefined,
+  }
+}
+
+export const transformQueueSummaryResponse = (
+  summary: EvaluationQueueSummaryResponse
+): EvaluationQueueSummary => {
+  return {
+    totalEntries: summary.total_entries,
+    activeEntries: summary.active_entries,
+    queuedEntries: summary.queued_entries,
+    runningEntries: summary.running_entries,
+    completedEntries: summary.completed_entries,
+    failedEntries: summary.failed_entries,
+    lastCompletedEntryId: summary.last_completed_entry_id ?? null,
+    lastCompletedPersonaId: summary.last_completed_persona_id ?? null,
+    lastCompletedTargetId: summary.last_completed_target_id ?? null,
+    lastCompletedAt: summary.last_completed_at ?? null,
+    lastCompletedDurationSeconds: summary.last_completed_duration_seconds ?? null,
+    oldestQueuedEntryId: summary.oldest_queued_entry_id ?? null,
+    oldestQueuedPersonaId: summary.oldest_queued_persona_id ?? null,
+    oldestQueuedRequestedAt: summary.oldest_queued_requested_at ?? null,
+    oldestQueuedWaitSeconds: summary.oldest_queued_wait_seconds ?? null,
+  }
+}
+
+export const transformQueueEventResponse = (event: EvaluationEventResponse): EvaluationEvent => {
+  return {
+    type: event.type,
+    status: event.status ?? undefined,
+    timestamp: event.timestamp,
+    queueEntry: event.queue_entry ?? {},
+    result: event.result ?? undefined,
+    error: event.error ?? undefined,
+    errorType: event.error_type ?? undefined,
   }
 }
 

@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Play, Gear, TrendUp, Code } from "@phosphor-icons/react"
+import { Play, Gear, TrendUp, Code, CircleNotch, CopySimple } from "@phosphor-icons/react"
 
 interface PersonaCardProps {
   id: string
@@ -11,9 +11,11 @@ interface PersonaCardProps {
   riskTolerance: number
   planningHorizon: string
   lastScore?: number
+  isSaving?: boolean
   onRun: (personaId: string) => void
   onEdit: (personaId: string) => void
   onInspect?: (personaId: string) => void
+  onDuplicate?: (personaId: string) => void
 }
 
 export function PersonaCard({ 
@@ -24,9 +26,11 @@ export function PersonaCard({
   riskTolerance, 
   planningHorizon, 
   lastScore, 
+  isSaving,
   onRun, 
   onEdit,
   onInspect,
+  onDuplicate,
 }: PersonaCardProps) {
   const getRiskColor = (risk: number) => {
     if (risk < 0.3) return "bg-brand-emerald-200 text-brand-emerald-500 border-transparent"
@@ -41,7 +45,10 @@ export function PersonaCard({
   }
 
   return (
-    <Card className="border border-border-strong bg-card/95 backdrop-blur-sm transition-transform transition-shadow hover:-translate-y-0.5 hover:shadow-card">
+    <Card
+      className="relative border border-border-strong bg-card/95 backdrop-blur-sm transition-transform transition-shadow hover:-translate-y-0.5 hover:shadow-card"
+      aria-busy={isSaving ?? false}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
@@ -60,6 +67,11 @@ export function PersonaCard({
       </CardHeader>
       
       <CardContent className="space-y-4">
+        {isSaving && (
+          <Badge variant="secondary" className="inline-flex items-center gap-2 text-xs font-medium">
+            <CircleNotch size={14} className="animate-spin" /> Saving…
+          </Badge>
+        )}
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline" className="border-brand-azure-200/60 bg-brand-azure-200/30 text-xs font-medium text-brand-azure-500">
             {archetype}
@@ -75,20 +87,33 @@ export function PersonaCard({
           </Badge>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button 
             size="sm" 
             onClick={() => onRun(id)}
+            disabled={isSaving}
             className="flex-1 justify-center gap-1 bg-primary text-primary-foreground hover:bg-primary/90"
           >
             <Play size={16} />
             Run Test
           </Button>
+          {onDuplicate && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onDuplicate(id)}
+              disabled={isSaving}
+              className="border-border-strong text-ink-600 hover:bg-secondary"
+            >
+              <CopySimple size={16} />
+            </Button>
+          )}
           {onInspect && (
             <Button
               size="sm"
               variant="outline"
               onClick={() => onInspect(id)}
+              disabled={isSaving}
               className="border-border-strong text-ink-600 hover:bg-secondary"
             >
               <Code size={16} />
@@ -98,6 +123,7 @@ export function PersonaCard({
             size="sm" 
             variant="outline" 
             onClick={() => onEdit(id)}
+            disabled={isSaving}
             className="border-border-strong text-ink-600 hover:bg-secondary"
           >
             <Gear size={16} />

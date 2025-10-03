@@ -9,6 +9,7 @@ import {
 } from "@/lib/appTransformers"
 import type { PersonaData, PersonaSummaryResponse } from "@/lib/appTypes"
 import type { UseAuditTrailResult } from "@/components/app/hooks/useAuditTrail"
+import { useAdminAuth } from "@/components/app/providers/AdminAuthProvider"
 
 export interface SavePersonaPayload {
   personaPayload: Omit<PersonaData, "id"> & { name: string }
@@ -36,6 +37,7 @@ export function usePersonaCatalog({
   recordAuditEvent,
 }: UsePersonaCatalogParams): UsePersonaCatalogResult {
   const [personas, setPersonasState] = useState<PersonaData[]>(initialPersonas)
+  const { authorizedApiFetch, hasAdminAccess } = useAdminAuth()
 
   const setPersonas = useCallback(
     (next: PersonaData[] | ((current: PersonaData[]) => PersonaData[])) => {
@@ -137,12 +139,48 @@ export function usePersonaCatalog({
       definition.metadata = metadata
 
       const isUpdate = editingPersona?.source === "remote"
+      const isEditing = Boolean(editingPersona)
+
+      let rollbackSnapshot: PersonaData[] = personas
+      let didOptimisticUpdate = false
+
+      const optimisticPersona: PersonaData = {
+        id: personaId,
+        name: personaPayload.name,
+        markdown: personaPayload.markdown,
+        config: {
+          archetype: personaPayload.config.archetype,
+          riskTolerance: personaPayload.config.riskTolerance,
+          planningHorizon: personaPayload.config.planningHorizon,
+          deceptionAversion: personaPayload.config.deceptionAversion,
+          toolPermissions: [...personaPayload.config.toolPermissions],
+          memoryWindow: personaPayload.config.memoryWindow,
+        },
+        lastScore: editingPersona?.lastScore,
+        source: editingPersona?.source ?? (isUpdate ? "remote" : "local"),
+        sourcePath: editingPersona?.sourcePath,
+        rawDefinition: editingPersona?.rawDefinition,
+      }
 
       try {
+        if (!hasAdminAccess) {
+          throw new Error("Admin key required to create or update personas.")
+        }
+
+        setPersonasState((currentPersonas: PersonaData[]) => {
+          didOptimisticUpdate = true
+          rollbackSnapshot = currentPersonas
+          if (isEditing) {
+            return currentPersonas.map((persona) => (persona.id === personaId ? optimisticPersona : persona))
+          }
+          const filtered = currentPersonas.filter((persona) => persona.id !== personaId)
+          return [...filtered, optimisticPersona]
+        })
+
         const endpoint = isUpdate ? `/api/personas/${personaId}` : "/api/personas"
         const method = isUpdate ? "PUT" : "POST"
 
-        const response = await fetch(endpoint, {
+        const response = await authorizedApiFetch(endpoint, {
           method,
           headers: {
             "Content-Type": "application/json",
@@ -180,12 +218,6 @@ export function usePersonaCatalog({
         const normalized = transformPersonaSummary(payload)
 
         setPersonasState((currentPersonas: PersonaData[]) => {
-          if (isUpdate) {
-            return currentPersonas.map((persona: PersonaData) =>
-              persona.id === personaId ? normalized : persona
-            )
-          }
-
           const filtered = currentPersonas.filter((persona: PersonaData) => persona.id !== normalized.id)
           return [...filtered, normalized]
         })
@@ -204,6 +236,9 @@ export function usePersonaCatalog({
 
         return { persona: normalized, isUpdate }
       } catch (error) {
+        if (didOptimisticUpdate) {
+          setPersonasState(rollbackSnapshot)
+        }
         recordAuditEvent({
           actor: "operator",
           action: isUpdate ? "persona.update" : "persona.create",
@@ -217,7 +252,7 @@ export function usePersonaCatalog({
         throw error instanceof Error ? error : new Error("Failed to save persona via orchestration service.")
       }
     },
-    [recordAuditEvent]
+    [authorizedApiFetch, hasAdminAccess, personas, recordAuditEvent]
   )
 
   return {

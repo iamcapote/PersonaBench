@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { CircleNotch } from "@phosphor-icons/react";
 
 interface PersonaConfig {
   archetype: string;
@@ -27,8 +28,10 @@ interface PersonaData {
 
 interface PersonaEditorProps {
   persona?: PersonaData;
-  onSave: (persona: Omit<PersonaData, "id">) => void;
+  seedPersona?: PersonaData;
+  onSave: (persona: Omit<PersonaData, "id">) => Promise<void> | void;
   onCancel: () => void;
+  isSaving?: boolean;
 }
 
 const TOOL_PRESET = ["calendar", "search", "calculator"];
@@ -62,24 +65,25 @@ const buildTemplate = (
   return lines.join("\n");
 };
 
-export function PersonaEditor({ persona, onSave, onCancel }: PersonaEditorProps) {
+export function PersonaEditor({ persona, seedPersona, onSave, onCancel, isSaving }: PersonaEditorProps) {
+  const sourcePersona = persona ?? seedPersona;
   const [activeTab, setActiveTab] = useState("details");
-  const [name, setName] = useState(persona?.name ?? "");
+  const [name, setName] = useState(sourcePersona?.name ?? "");
   const [summary, setSummary] = useState(() => {
-    if (!persona?.markdown) return "";
-    const overview = persona.markdown
+    if (!sourcePersona?.markdown) return "";
+    const overview = sourcePersona.markdown
       .split("\n")
       .map((line) => line.trim())
       .find((line) => line && !line.startsWith("#"));
     return overview ?? "";
   });
-  const [archetype, setArchetype] = useState(persona?.config.archetype ?? "Strategic decision-maker");
-  const [riskTolerance, setRiskTolerance] = useState<number>(persona?.config.riskTolerance ?? 0.5);
-  const [planningHorizon, setPlanningHorizon] = useState(persona?.config.planningHorizon ?? "3 steps");
-  const [deceptionAversion, setDeceptionAversion] = useState<number>(persona?.config.deceptionAversion ?? 0.4);
-  const [memoryWindow, setMemoryWindow] = useState<number>(persona?.config.memoryWindow ?? 5);
-  const [toolInput, setToolInput] = useState<string>((persona?.config.toolPermissions ?? TOOL_PRESET).join(", "));
-  const [markdown, setMarkdown] = useState(() => persona?.markdown ?? buildTemplate(name, summary, archetype, planningHorizon, riskTolerance, deceptionAversion, TOOL_PRESET));
+  const [archetype, setArchetype] = useState(sourcePersona?.config.archetype ?? "Strategic decision-maker");
+  const [riskTolerance, setRiskTolerance] = useState<number>(sourcePersona?.config.riskTolerance ?? 0.5);
+  const [planningHorizon, setPlanningHorizon] = useState(sourcePersona?.config.planningHorizon ?? "3 steps");
+  const [deceptionAversion, setDeceptionAversion] = useState<number>(sourcePersona?.config.deceptionAversion ?? 0.4);
+  const [memoryWindow, setMemoryWindow] = useState<number>(sourcePersona?.config.memoryWindow ?? 5);
+  const [toolInput, setToolInput] = useState<string>((sourcePersona?.config.toolPermissions ?? TOOL_PRESET).join(", "));
+  const [markdown, setMarkdown] = useState(() => sourcePersona?.markdown ?? buildTemplate(name, summary, archetype, planningHorizon, riskTolerance, deceptionAversion, TOOL_PRESET));
 
   const tools = useMemo(
     () =>
@@ -111,8 +115,8 @@ export function PersonaEditor({ persona, onSave, onCancel }: PersonaEditorProps)
         toolPermissions: tools.length > 0 ? tools : TOOL_PRESET,
         memoryWindow,
       },
-      lastScore: persona?.lastScore,
-      source: persona?.source ?? "local",
+      lastScore: sourcePersona?.lastScore,
+      source: sourcePersona?.source ?? "local",
     });
   };
 
@@ -129,8 +133,9 @@ export function PersonaEditor({ persona, onSave, onCancel }: PersonaEditorProps)
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" disabled={!canSave}>
-            Save Persona
+          <Button type="submit" disabled={!canSave || isSaving}>
+            {isSaving ? <CircleNotch size={16} className="mr-2 animate-spin" /> : null}
+            {isSaving ? "Saving…" : "Save Persona"}
           </Button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 # Evaluation & Feedback Design
 
-_Last updated: 2025-09-29_
+_Last updated: 2025-10-02_
 
 ## Objectives
 
@@ -85,8 +85,9 @@ All new scenarios should ship with:
 - Admin UI must surface:
   - Persona status (draft, approved, retired).
   - Scenario readiness (experimental, production).
-  - Evaluation queue with run history and health indicators.
+   - Evaluation queue with run history, health indicators, and live status streaming via ETags / SSE.
 - Provide bulk import/export (JSONL) to sync with research infra.
+- Surface live queue updates via the SSE endpoints (`/api/evaluations/queue/{id}/events`) so operators can monitor progress without polling.
 
 ## API Contracts (Draft)
 
@@ -94,7 +95,10 @@ All new scenarios should ship with:
 | --- | --- | --- |
 | `/api/personas` | GET/POST/PUT | List, create, update personas; enforce schema validation. |
 | `/api/scenarios` | GET/POST/PUT | Manage scenarios; provide template catalog. |
-| `/api/evaluations` | POST | Submit run manifest (persona IDs, scenario IDs, adapter config). |
+| `/api/evaluations` | POST | Submit run manifest (persona IDs, scenario IDs, adapter config). Returns `202` with queue + run identifiers. |
+| `/api/evaluations/queue/{id}` | GET | Poll run status; supports `If-None-Match` for efficient long polling. |
+| `/api/evaluations/queue/{id}/events` | GET | Stream lifecycle updates via Server-Sent Events. |
+| `/api/evaluations/queue/{id}/events/history` | GET | Fetch recorded lifecycle events for clients that prefer polling. |
 | `/api/evaluations/{id}` | GET | Fetch run status, metrics, trace URIs. |
 | `/api/feedback/pairs` | POST | Create double-blind pairings from cached responses. |
 | `/api/feedback/votes` | POST | Record reviewer vote; backend updates aggregation pipeline. |

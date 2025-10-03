@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ChartBar } from "@phosphor-icons/react"
@@ -6,6 +6,8 @@ import { ChartBar } from "@phosphor-icons/react"
 import {
   ALL_FILTER,
   AnalyticsFilters,
+  ComparisonCohortFilters,
+  ComparisonSummaryHeader,
   HeadToHeadComparisons,
   OverviewMetricsPanel,
   PersonaPerformancePanel,
@@ -27,21 +29,81 @@ interface ResultsAnalyticsProps {
   results: EvaluationResult[]
 }
 
+type DifficultyFilter = "all" | "easy" | "medium" | "hard"
+
 export function ResultsAnalytics({ personas, scenarios, results }: ResultsAnalyticsProps) {
   const [selectedPersona, setSelectedPersona] = useState<string>(ALL_FILTER)
   const [selectedScenario, setSelectedScenario] = useState<string>(ALL_FILTER)
   const [evaluationType, setEvaluationType] = useState<AnalyticsFilterState["evaluationType"]>(ALL_FILTER)
+  const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyFilter>("all")
 
-  const handleEvaluationTypeChange = (value: string) => {
-    if (isEvaluationMode(value)) {
-      setEvaluationType(value)
-      return
+  const handleEvaluationTypeChange = useCallback(
+    (value: string) => {
+      if (isEvaluationMode(value)) {
+        setEvaluationType(value)
+        return
+      }
+      setEvaluationType(ALL_FILTER)
+    },
+    [],
+  )
+
+  const handleCohortEvaluationTypeChange = useCallback(
+    (value: "all" | "algorithmic" | "human") => {
+      handleEvaluationTypeChange(value)
+    },
+    [handleEvaluationTypeChange],
+  )
+
+  const scenarioById = useMemo(() => {
+    return scenarios.reduce<Map<string, ScenarioData>>((acc, scenario) => {
+      acc.set(scenario.id, scenario)
+      return acc
+    }, new Map())
+  }, [scenarios])
+
+  const handleScenarioChange = useCallback((value: string) => {
+    setSelectedScenario(value)
+    if (value !== ALL_FILTER) {
+      setSelectedDifficulty("all")
     }
-    setEvaluationType(ALL_FILTER)
-  }
+  }, [])
 
-  const { personaNameMap, personaAnalysis, topPerformers } = usePersonaAnalytics({ personas, scenarios, results })
-  const { scenarioAnalysis } = useScenarioAnalytics({ personas, scenarios, results })
+  const handleDifficultyChange = useCallback((value: DifficultyFilter) => {
+    setSelectedDifficulty(value)
+    if (value !== "all") {
+      setSelectedScenario(ALL_FILTER)
+    }
+  }, [])
+
+  const difficultyFilteredResults = useMemo(() => {
+    if (selectedDifficulty === "all") {
+      return results
+    }
+
+    return results.filter((entry) => {
+      const scenario = scenarioById.get(entry.scenarioId)
+      if (!scenario) {
+        return false
+      }
+      return scenario.difficulty === selectedDifficulty
+    })
+  }, [results, scenarioById, selectedDifficulty])
+
+  const cohortResults = useMemo(() => {
+    if (evaluationType === ALL_FILTER) {
+      return difficultyFilteredResults
+    }
+
+    return difficultyFilteredResults.filter((entry) => entry.type === evaluationType)
+  }, [difficultyFilteredResults, evaluationType])
+
+  const { personaNameMap, personaAnalysis, topPerformers } = usePersonaAnalytics({
+    personas,
+    scenarios,
+    results: cohortResults,
+  })
+  const { scenarioAnalysis } = useScenarioAnalytics({ personas, scenarios, results: cohortResults })
 
   const filters = useMemo(
     () => ({
@@ -53,10 +115,15 @@ export function ResultsAnalytics({ personas, scenarios, results }: ResultsAnalyt
   )
 
   const {
+    filteredResults,
     comparisonPersonaIds,
     comparisonMatrix,
     comparisonHighlights,
-  } = useComparisonAnalytics({ results, filters, personaNameMap })
+  } = useComparisonAnalytics({
+    results: cohortResults,
+    filters,
+    personaNameMap,
+  })
 
   if (results.length === 0) {
     return (
@@ -72,6 +139,13 @@ export function ResultsAnalytics({ personas, scenarios, results }: ResultsAnalyt
 
   return (
     <div className="space-y-6">
+      <ComparisonSummaryHeader personas={personas} scenarios={scenarios} results={cohortResults} />
+      <ComparisonCohortFilters
+        evaluationType={evaluationType}
+        onEvaluationTypeChange={handleCohortEvaluationTypeChange}
+        selectedDifficulty={selectedDifficulty}
+        onDifficultyChange={handleDifficultyChange}
+      />
       <AnalyticsFilters
         personas={personas}
         scenarios={scenarios}
@@ -79,7 +153,7 @@ export function ResultsAnalytics({ personas, scenarios, results }: ResultsAnalyt
         selectedScenario={selectedScenario}
         selectedEvaluationType={evaluationType}
         onPersonaChange={setSelectedPersona}
-        onScenarioChange={setSelectedScenario}
+        onScenarioChange={handleScenarioChange}
         onEvaluationTypeChange={handleEvaluationTypeChange}
       />
 
@@ -92,7 +166,7 @@ export function ResultsAnalytics({ personas, scenarios, results }: ResultsAnalyt
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <OverviewMetricsPanel personas={personas} results={results} />
+          <OverviewMetricsPanel personas={personas} results={cohortResults} />
           <TopPerformersCard performers={topPerformers} />
         </TabsContent>
 

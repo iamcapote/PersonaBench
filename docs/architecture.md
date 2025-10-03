@@ -1,38 +1,38 @@
 # PersonaBench Architecture & Status
 
-_Last updated: 2025-09-30_
+_Last updated: 2025-10-02_
 
 ## System Surfaces
 
 | Surface | Tech Stack | Current Capability | Notes |
 | --- | --- | --- | --- |
-| Python backend | `bench/`, `agents/`, `harness/` packages | Implements plan→act→react contract, adapters for supported simulators, evaluation metrics, CLI + match harness | LangChain + FastAPI orchestration service (see [`orchestration/`](../orchestration/)) publishes personas/scenarios/games APIs; shared `GameMaster` orchestrates multi-persona matches |
-| React frontend | `src/` (Vite + React + Tailwind) | Persona editor, scenario selector, mock evaluation runner, results gallery | Hydrates personas, scenarios, and games from orchestration service; evaluation wiring still mocked |
+| Python backend | `bench/`, `agents/`, `harness/` packages | Implements plan→act→react contract, adapters for supported simulators, evaluation metrics, CLI + match harness | LangChain + FastAPI orchestration service (see [`orchestration/`](../orchestration/)) publishes personas/scenarios/games/evaluations plus admin routes; shared `GameMaster` orchestrates multi-persona matches |
+| React frontend | `src/` (Vite + React + Tailwind) | Persona editor, scenario selector, evaluation queue, audit log, feedback workspace | Header controls capture the admin key and route all service mutations through a shared client; persona workspace now has optimistic saves, one-click duplication, and bulk import/export, while queue playback consumes new SSE endpoints |
 | Docs & governance | `README.md`, `PRD.md`, `AGENTS.md`, `completion_plan.md`, `games/games.md`, `dnd.md` | High-level goals, games roadmap, and scenario spec | Tracks split between logic games and emergent D&D-style scenarios |
 
 ## Integration Gaps
 
 1. **LangChain orchestration layer**
-   - FastAPI + LangChain scaffolding now exposes catalog endpoints and wraps the rollout harness.
-   - Required work: route match-based evaluations (via `GameMaster`) through the service, stream trace logs, and harden error handling.
-   - Implication: frontend still cannot launch full evaluations until authentication and streaming guards land.
+   - REST endpoints, LangChain runners, and the in-process evaluation worker are live; queue entries push status events to SSE streams.
+   - Required work: swap to a durable worker tier, persist traces in something sturdier than JSON, and extend streaming beyond the evaluation queue.
+   - Implication: operators gain live updates today, but production workloads still need resilience and long-term retention.
 
 2. **Operator/Admin tooling**
-   - Frontend lacks authenticated flows, persona library management, scenario curation, or run scheduling UI.
-   - Backend exposes no CRUD APIs for personas/scenarios; everything is file-based. See [`operator_roles.md`](./operator_roles.md) for role definitions and authorization requirements that future endpoints must enforce.
+   - The frontend now enforces the admin key and persists personas, scenarios, queue entries, and audit events through the service.
+   - Outstanding: admin key rotation UX, persona/game transparency enhancements, and streaming playback for evaluation traces.
 
 3. **Model comparison surfaces**
-   - Metrics exist in Python but there is no aggregation or visualization pipeline for multi-model comparisons.
-   - Need consistent schema for storing evaluation runs plus APIs to fetch comparisons for the UI.
+   - Metric primitives exist, but we still lack aggregation jobs and dashboards that compare personas across runs.
+   - Need a durable store for metrics plus APIs feeding the comparison and analytics tabs.
 
 4. **User feedback loop**
-   - No mechanism to capture human preferences. Desired flow: double-blind A/B where two persona responses are cached and users select a winner.
-   - Requires storage (e.g., Postgres, DuckDB, or even local JSONL) and processes for replaying experiments into aggregate metrics.
+   - Double-blind comparison flows ship end-to-end (pairing API, React reviewer workspace, vote persistence).
+   - Next: schedule periodic Bradley–Terry aggregation, expose reviewer analytics, and support continuous feedback export.
 
 5. **Scenario expansion & match coverage**
-   - Card **games** (solitaire, blackjack, poker) and the new tic-tac-toe engine live under `games/` as logic/game-theory drills; see [`games/games.md`](../games/games.md).
-   - **Scenarios** remain the arena for emergent, reactionary evaluation: existing OSWorld/WebArena/Tales manifests plus the D&D benchmark described in [`dnd.md`](../dnd.md).
-   - Need to backfill blackjack and poker adapters with `TurnBasedGame` wrappers so they can participate in multi-persona matches, while continuing to author lightweight deterministic engines for future drills.
+   - Card **games** (solitaire, blackjack, poker) and the tic-tac-toe engine live under `games/`.
+   - **Scenarios** remain the sandbox for emergent evaluation: OSWorld/WebArena/Tales manifests plus the D&D benchmark in [`dnd.md`](../dnd.md).
+   - Blackjack and heads-up poker now ship with `GameMaster` wrappers and integration tests; additional deterministic drills will broaden coverage further.
 
 ## Recommended Backend Plan
 
@@ -54,6 +54,7 @@ _Last updated: 2025-09-30_
 
 1. **Admin Console**
    - Multi-tab UI for persona library, scenario catalog, evaluation queue, human review inbox.
+   - Evaluation queue view polls the orchestration service every ~15s, surfaces last-sync telemetry, and lets operators trigger manual refreshes when diagnosing backlog issues.
    - Authentication + role-based access (operators vs reviewers).
 
 2. **Model Comparison Dashboard**
@@ -116,10 +117,10 @@ All new metrics must map to persona/scenario IDs and support aggregation.
 
 ## Action Items Summary
 
-1. Add LangChain + FastAPI scaffolding and capture controller architecture in this document.
-2. Stand up service APIs for personas, scenarios, and evaluation runs.
-3. Implement storage + API contracts for human feedback and model comparison data.
-4. Wrap blackjack and poker adapters with the `GameMaster`, then scale to additional text-first board/card engines with manifests and deterministic tests.
-5. Align frontend roadmap with backend APIs via shared OpenAPI/JSON schema definitions.
+1. Introduce an async worker tier and surface streaming evaluation telemetry to the frontend.
+2. Migrate orchestration state from JSON files to a structured store with retention policies.
+3. Implement aggregation endpoints powering comparison dashboards (persona cohorts, trend lines, volatility alerts).
+4. Wrap blackjack and poker adapters with the `GameMaster` (**done**) and scale to additional text-first board/card engines with manifests and deterministic tests.
+5. Document and automate admin key rotation plus secret distribution for operators.
 
 Progress on these items should be mirrored in `completion_plan.md` and surfaced via milestone tracking.

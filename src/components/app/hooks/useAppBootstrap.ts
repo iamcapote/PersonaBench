@@ -6,24 +6,28 @@ import {
   transformGameSummary,
   transformPersonaSummary,
   transformQueueEntryResponse,
+  transformQueueSummaryResponse,
   transformScenarioSummary,
 } from "@/lib/appTransformers"
 import type {
   AuditEvent,
   AuditEventResponse,
   EvaluationQueueItem,
-  EvaluationQueueResponse,
+  EvaluationQueueCollectionResponse,
+  EvaluationQueueSummary,
   GameSummaryResponse,
   PersonaData,
   PersonaSummaryResponse,
   ScenarioData,
   ScenarioSummaryResponse,
 } from "@/lib/appTypes"
+import { useAdminAuth } from "@/components/app/providers/AdminAuthProvider"
 
 interface UseAppBootstrapParams {
   setPersonas: (next: PersonaData[] | ((current: PersonaData[]) => PersonaData[])) => void
   setScenarios: (next: ScenarioData[] | ((current: ScenarioData[]) => ScenarioData[])) => void
   setEvaluationQueue: (entries: EvaluationQueueItem[]) => void
+  setQueueSummary: (summary: EvaluationQueueSummary | null) => void
   setAuditLog: (events: AuditEvent[]) => void
   onScenariosHydrated?: (scenarios: ScenarioData[]) => void
 }
@@ -38,18 +42,20 @@ export function useAppBootstrap({
   setPersonas,
   setScenarios,
   setEvaluationQueue,
+  setQueueSummary,
   setAuditLog,
   onScenariosHydrated,
 }: UseAppBootstrapParams): UseAppBootstrapResult {
   const [isSyncing, setIsSyncing] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const { authorizedApiFetch, hasAdminAccess } = useAdminAuth()
 
   useEffect(() => {
     let cancelled = false
 
     const loadPersonas = async (): Promise<PersonaSummaryResponse[] | null> => {
       try {
-        const response = await fetch("/api/personas")
+          const response = await authorizedApiFetch("/personas")
         if (!response.ok) throw new Error(`Persona request failed with status ${response.status}`)
         const payload: PersonaSummaryResponse[] = await response.json()
         if (!cancelled && payload.length === 0) {
@@ -72,7 +78,7 @@ export function useAppBootstrap({
 
     const loadScenarios = async (): Promise<ScenarioSummaryResponse[] | null> => {
       try {
-        const response = await fetch("/api/scenarios")
+          const response = await authorizedApiFetch("/scenarios")
         if (!response.ok) throw new Error(`Scenario request failed with status ${response.status}`)
         const payload: ScenarioSummaryResponse[] = await response.json()
         if (!cancelled && payload.length === 0) {
@@ -95,7 +101,7 @@ export function useAppBootstrap({
 
     const loadGames = async (): Promise<GameSummaryResponse[] | null> => {
       try {
-        const response = await fetch("/api/games")
+          const response = await authorizedApiFetch("/games")
         if (!response.ok) throw new Error(`Game request failed with status ${response.status}`)
         const payload: GameSummaryResponse[] = await response.json()
         if (!cancelled && payload.length === 0) {
@@ -116,11 +122,15 @@ export function useAppBootstrap({
       }
     }
 
-    const loadQueue = async (): Promise<EvaluationQueueResponse[] | null> => {
+    const loadQueue = async (): Promise<EvaluationQueueCollectionResponse | null> => {
       try {
-        const response = await fetch("/admin/queue")
+        if (!hasAdminAccess) {
+          return null
+        }
+
+          const response = await authorizedApiFetch("/admin/queue")
         if (!response.ok) throw new Error(`Queue request failed with status ${response.status}`)
-        const payload: EvaluationQueueResponse[] = await response.json()
+        const payload: EvaluationQueueCollectionResponse = await response.json()
         return payload
       } catch (error) {
         console.error(error)
@@ -133,7 +143,11 @@ export function useAppBootstrap({
 
     const loadAudit = async (): Promise<AuditEventResponse[] | null> => {
       try {
-        const response = await fetch("/admin/audit")
+        if (!hasAdminAccess) {
+          return null
+        }
+
+          const response = await authorizedApiFetch("/admin/audit")
         if (!response.ok) throw new Error(`Audit request failed with status ${response.status}`)
         const payload: AuditEventResponse[] = await response.json()
         return payload
@@ -173,8 +187,12 @@ export function useAppBootstrap({
         onScenariosHydrated?.(combined)
       }
 
-      if (queuePayload && queuePayload.length > 0) {
-        setEvaluationQueue(queuePayload.map(transformQueueEntryResponse))
+      if (queuePayload) {
+        const entries = queuePayload.entries?.map(transformQueueEntryResponse) ?? []
+        setEvaluationQueue(entries)
+        setQueueSummary(transformQueueSummaryResponse(queuePayload.summary))
+      } else {
+        setQueueSummary(null)
       }
 
       if (auditPayload && auditPayload.length > 0) {
@@ -190,7 +208,16 @@ export function useAppBootstrap({
     return () => {
       cancelled = true
     }
-  }, [setPersonas, setScenarios, setEvaluationQueue, setAuditLog, onScenariosHydrated])
+  }, [
+    authorizedApiFetch,
+    hasAdminAccess,
+    onScenariosHydrated,
+    setAuditLog,
+    setEvaluationQueue,
+    setQueueSummary,
+    setPersonas,
+    setScenarios,
+  ])
 
   return {
     isSyncing,

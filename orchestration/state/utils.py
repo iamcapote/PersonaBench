@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, Iterable, MutableMapping
+from typing import Any, Dict, Iterable, MutableMapping, Optional
 
 
 def normalize_metadata(payload: Any) -> Dict[str, Any]:
@@ -39,4 +39,18 @@ def normalize_for_storage(value: Any) -> Any:
         return [normalize_for_storage(item) for item in value]
     return value
 
-__all__ = ["normalize_for_storage", "normalize_metadata", "sanitize_metadata"]
+
+def parse_timestamp(value: Any) -> Optional[datetime]:
+    """Best-effort ISO-8601 timestamp parser."""
+
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str) and value:
+        try:
+            normalized = value.replace("Z", "+00:00")
+            return datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+    return None
+
+__all__ = ["normalize_for_storage", "normalize_metadata", "parse_timestamp", "sanitize_metadata"]

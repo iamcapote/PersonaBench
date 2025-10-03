@@ -131,6 +131,67 @@ export interface EvaluationQueueResponse {
 	metadata?: Record<string, unknown> | null
 }
 
+export interface EvaluationQueueSummary {
+	totalEntries: number
+	activeEntries: number
+	queuedEntries: number
+	runningEntries: number
+	completedEntries: number
+	failedEntries: number
+	lastCompletedEntryId?: string | null
+	lastCompletedPersonaId?: string | null
+	lastCompletedTargetId?: string | null
+	lastCompletedAt?: string | null
+	lastCompletedDurationSeconds?: number | null
+	oldestQueuedEntryId?: string | null
+	oldestQueuedPersonaId?: string | null
+	oldestQueuedRequestedAt?: string | null
+	oldestQueuedWaitSeconds?: number | null
+}
+
+export interface EvaluationQueueSummaryResponse {
+	total_entries: number
+	active_entries: number
+	queued_entries: number
+	running_entries: number
+	completed_entries: number
+	failed_entries: number
+	last_completed_entry_id?: string | null
+	last_completed_persona_id?: string | null
+	last_completed_target_id?: string | null
+	last_completed_at?: string | null
+	last_completed_duration_seconds?: number | null
+	oldest_queued_entry_id?: string | null
+	oldest_queued_persona_id?: string | null
+	oldest_queued_requested_at?: string | null
+	oldest_queued_wait_seconds?: number | null
+}
+
+export interface EvaluationQueueCollectionResponse {
+	entries: EvaluationQueueResponse[]
+	summary: EvaluationQueueSummaryResponse
+}
+
+export interface EvaluationEvent {
+	type: "status" | "result" | "error"
+	status?: string | null
+	timestamp: string
+	queueEntry: Record<string, unknown>
+	result?: Record<string, unknown> | null
+	error?: string | null
+	errorType?: string | null
+}
+
+export interface EvaluationEventResponse {
+	type: "status" | "result" | "error"
+	status?: string | null
+	timestamp: string
+	queue_entry: Record<string, unknown>
+	result?: Record<string, unknown> | null
+	error?: string | null
+	error_type?: string | null
+}
+
 export interface EvaluationResult {
 	personaId: string
 	scenarioId: string

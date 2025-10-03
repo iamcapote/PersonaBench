@@ -1,6 +1,6 @@
 # Scenario Playbooks
 
-_Last updated: 2025-09-30_
+_Last updated: 2025-10-02_
 
 PersonaBench ships with a growing catalog of deterministic, text-first scenarios designed to exercise plan→act→react behaviour without external dependencies. This playbook summarizes the available experiences, episode structure, scoring hooks, and persona considerations so operators can schedule runs or extend adapters with confidence.
 
@@ -109,5 +109,7 @@ PersonaBench ships with a growing catalog of deterministic, text-first scenarios
 2. **Implement adapter**: expose `reset()` and `execute()` returning `Observation` and `StepResult` populated with timestamped telemetry.
 3. **Add tests**: follow patterns in `tests/test_blackjack_adapter.py` and `tests/test_solitaire_adapter.py` to lock in deterministic behaviour.
 4. **Document**: extend this playbook with episode flow, reward signals, and persona guidance for the new scenario family.
+
+💡 **Tip**: The Scenario Builder UI now favors simple, explicit controls—add/duplicate buttons and move up/down arrows. Setup steps, constraints, and evaluation criteria stay in sync with the live JSON/YAML preview, and save actions show an optimistic progress state to prevent double submissions. Use it to prototype scenarios quickly before exporting manifests into version control.
 
 Maintaining detailed playbooks ensures operators and reviewers share a common mental model of each scenario, reducing onboarding time and improving evaluation reproducibility.

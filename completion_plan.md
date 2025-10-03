@@ -18,9 +18,13 @@ This plan outlines actionable next steps for developing and improving PersonaBen
 - **Objective**: Deliver authenticated UI and APIs for managing personas, scenarios, and evaluation runs.
 - **Tasks**:
   - [x] Implement persona/scenario CRUD endpoints with schema validation and versioning metadata (see FastAPI routes in `orchestration/routes.py` and catalog helpers in `orchestration/catalog.py`, covered by `tests/test_orchestration_crud.py`).
-  - Update the React app with admin tabs for library, queue, and audit logs; migrate persistence from client-only storage to service calls.
+  - [x] Update the React app with admin tabs for library, queue, and audit logs; migrate persistence from client-only storage to service calls.
+    - Admin key provider now lives in the header, stores the secret locally, and injects `X-Admin-Key` into all authorized fetches.
+    - Mutating actions surface clear errors when the key is missing and fall back to local placeholders.
   - [x] Document workflow roles (operator, reviewer) and authorization requirements (see `docs/operator_roles.md`).
-  - Design a drag-and-drop (DnD) builder that lets operators create and save personas, scenarios, and rule variants with inline previews of the underlying JSON/YAML.
+  - [x] Design a streamlined builder that relies on explicit controls (add, duplicate, move up/down) so operators can create and save personas, scenarios, and rule variants with inline JSON/YAML previews—no drag-and-drop required.
+  - [x] Enable simple reordering for scenario setup steps, constraints, and evaluation criteria while keeping JSON/YAML previews in sync, with both keyboard move buttons and optional drag handles plus optimistic save feedback.
+  - [x] Add optimistic UI states, toast feedback, and bulk import/export tooling now that remote persistence is enabled.
   - [x] Surface game manifests, rule packs, and adapter code snippets directly in the UI so users can inspect mechanics before running evaluations.
   - [x] Add guided transparency tooling (side-by-side code + UI) so every change to games or personas can be traced back to source files.
     - Persona/Game transparency panels now render source paths and raw definitions (`PersonaTransparencyPanel`, `ScenarioTransparencyPanel`, `GameTransparencyPanel`).
@@ -34,13 +38,15 @@ This plan outlines actionable next steps for developing and improving PersonaBen
   - Borrow proven layouts: combine dense summary headers (leaderboards), multi-panel comparisons (llmarena, Adaptive Reasoning chart), and modular stat cards (DnD dashboards) to keep information scannable.
 - **Tasks**:
   1. **Information Architecture Overhaul**
-    - Consolidate navigation into "Runs", "Compare", "Personas", and "Scenarios" hubs.
-    - Introduce a persistent context rail with the active persona, scenario, and evaluation status so users never lose track of scope.
+    - [x] Consolidate navigation into "Runs", "Compare", "Personas", and "Scenarios" hubs.
+    - [x] Introduce a persistent context rail with the active persona, scenario, and evaluation status so users never lose track of scope.
     - Split setup versus analysis flows: wizard-style creation (left rail) and dashboard-style review (full-width, card-based).
   2. **Comparison Workspace**
-    - Build a sticky comparison header showing aggregate intelligence, cost, latency, and risk in a matrix similar to the llmarena comparison sheet.
+    - [x] Build a sticky comparison header showing aggregate intelligence, cost, latency, and risk in a matrix similar to the llmarena comparison sheet.
     - Provide toggleable visualizations: bar/box charts for score distributions (echoing the DnD stats box plot) and heatmaps for volatility and cooperation metrics.
     - Support flexible cohort selection with chips + filters for provider, modality, context window, and budget.
+      - [x] Add evaluation mode and scenario difficulty cohort chips that drive analytics filtering (`ComparisonCohortFilters`).
+      - [ ] Extend cohort filters to provider, modality, context window, and budget segments.
     - [x] Replace the `ResultsAnalytics` head-to-head tab with a live persona comparison matrix (win-rate + score edge) derived from shared scenarios.
   3. **Persona & Scenario Detail Modules**
     - Design card templates mirroring the Notion-style persona sheets: key stats on the left, expandable tabs for memory/tools/logs on the right.
@@ -97,23 +103,46 @@ This plan outlines actionable next steps for developing and improving PersonaBen
   - [x] Introduce the core `GameMaster` with `TurnBasedGame` interface and `MatchRunner` harness to coordinate turn-by-turn agent play.
   - [x] Implement a production-grade `TicTacToeGame` engine that enforces legal moves, scoring, and structured events.
   - [x] Add tic-tac-toe match configs plus automated tests covering invalid moves and full-game completion.
-  - Integrate existing blackjack/poker adapters with the game master for true multi-persona play.
+  - [x] Integrate existing blackjack/poker adapters with the game master for true multi-persona play.
 
-## Latest Progress (2025-10-01)
+## Latest Progress (2025-10-02)
+- Polished the persona workspace with optimistic save indicators, toast-driven feedback, and inline spinners while persisting edits through the service catalog.
+- Added one-click persona import/export controls (with admin key gating) to streamline bulk catalog updates alongside JSON bundle parsing + download helpers shared with the library dashboard.
+- Introduced an in-process evaluation worker plus SSE queue endpoints so runs execute asynchronously with live status streaming while we plan the jump to durable infrastructure.
+- Added admin key controls to the React header, centralising secret storage and automatically attaching `X-Admin-Key` to persona, scenario, queue, audit, and feedback mutations.
+- Routed all frontend data loaders through the shared admin client, short-circuiting admin endpoints when the key is absent and improving toast feedback for operators.
+- Simplified the scenario builder to rely on explicit add/duplicate/move controls, removed drag-and-drop affordances, and added one-click duplication for setup steps, constraints, and evaluation criteria to speed up authoring while staying accessible.
+- Reorganized the operator navigation into Runs, Compare, Personas, and Scenarios hubs, folding queue, audit, library, and analytics surfaces into the new layout for faster context switching.
+- Added a persistent context rail that surfaces the active scenario, selected personas, queue status, and quick navigation links so operators keep their bearings between workflows.
+- Introduced a sticky comparison summary header that rolls up evaluation volume, scoring averages, persona/scenario coverage, and telemetry placeholders for cost and latency to anchor the analytics workspace.
+- Added cohort filter chips for evaluation mode and scenario difficulty, wiring them into the analytics pipeline so summary metrics, leaderboards, and comparisons respect the selected slice while keeping persona/scenario filters in sync.
+- Refreshed docs (`README.md`, `docs/architecture.md`, `docs/langchain_service.md`, `completion_plan.md`) to reflect the new workflow and clarify the remaining workstreams.
+- Enriched the evaluation queue with persisted summary metrics, exposed them via both admin and public APIs, and refreshed the queue dashboards to surface backlog pressure and recent run telemetry.
+- Added automatic queue polling with manual refresh controls and last-sync/error indicators on the operator dashboards, backed by new API regression tests covering public and admin queue endpoints.
+- Extended the queue dashboard with per-run event timelines powered by the new history endpoint so operators can audit lifecycle transitions without leaving the UI.
+- Wired the queue timeline to the SSE endpoint so live events stream directly into the React dashboard, with resilience for interruptions and a clear "Live/Paused" status indicator.
+- Enabled one-click export of run event timelines from the queue dashboard so operators can archive JSON logs for investigations and share live playback snapshots.
+- Added clipboard copy controls next to the export action so operators can grab timeline JSON instantly when triaging incidents or sharing quick updates.
+- Surfaced per-run event counts alongside the streaming badge so operators immediately see how rich a timeline is before drilling into details.
+- Introduced timeline duration badges derived from event timestamps so operators can estimate run length without opening the full detail view.
+- Wrapped the run timeline in an auto-scrolling pane so live updates stay visible while still allowing manual review via a capped scroll area.
+- Added a "Jump to latest" control that appears when operators scroll back in history, making it easy to resume live updates after incident review.
+- Added timeline filter toggles (All vs. Errors) plus inline error counts so operators can zero in on failure states without losing access to the full history.
+- Added persona card duplication controls so operators can spin up variants with a prefilled editor while keeping the creation flow button-driven.
+
+### Previous Checkpoint (2025-10-01)
 - Completed the double-blind reviewer workspace in the React app, enabling scenario filtering, reviewer metadata capture, and preference submission wired to comparison vote APIs.
 - Added navigation hooks and transparency panels so reviewers can jump between comparisons and underlying persona/scenario definitions.
 - Ran `npm run lint` (TypeScript `tsc --noEmit`) to validate the new UI and resolved a `Select` prop regression introduced by the disabled state.
 
-### Paused Track: Admin Auth & Frontend Wiring
-- **Backend status**: FastAPI admin, queue, audit, and persona/scenario mutation routes now respect an env-driven `PERSONABENCH_ADMIN_KEY`. Tests inject a deterministic key through `tests/conftest.py` and update headers accordingly.
-- **Outstanding work**: The React prototype still issues unauthenticated requests; we need a lightweight admin key capture (client-side storage, attach header/query) plus error handling for `403` responses.
+### Paused Track: Async Worker & Streaming Wiring
+- **Backend status**: Evaluations now enqueue onto an in-process background worker that pushes lifecycle events to SSE streams while persisting responses to JSON stores.
+- **Outstanding work**: We still need a durable queue/worker for horizontal scale, streaming of full trace payloads, and an archival store beyond JSON files.
 - **Resume checklist**:
-  1. Add a global admin key provider in the frontend (context + secure input) and plumb it into `fetch` helpers touching `/admin/*`, `/api/personas`, and `/api/scenarios` mutations.
-  2. Document operator setup flow (set env var, copy key into UI) and ensure the orchestration service tolerates missing keys by responding with `403` rather than `401`.
-  3. Re-run full backend + frontend test suites (`pytest`, `npm run lint`) once the UI wiring lands.
-  4. Consider a future secret rotation story (key reload without restart) before shipping beyond internal environments.
-
-Leave this section intact until the UI work merges so future contributors can resume without spelunking commit history.
+  1. Swap the in-process worker for a durable queue (Celery, RQ, or Arq) with retry semantics.
+  2. Extend streaming beyond status events—deliver trace chunks and audit updates so the frontend can render live playback.
+  3. Replace JSON persistence in `orchestration/state/` with DuckDB/Postgres + object storage for trace payloads, including migrations.
+  4. Smoke-test the durable worker + streaming integration with `pytest` and UI linting to ensure SSE consumers remain stable.
 
 ### Follow-Up Opportunities
 - Add optimistic loading states and error toasts for vote submission failures once backend retries are defined.
@@ -128,6 +157,8 @@ Leave this section intact until the UI work merges so future contributors can re
 - 📊 Metrics: Basic implementation
 - 🌐 Service layer: Not implemented (frontend is standalone prototype)
 - 🧑‍🔬 Human feedback: Not implemented (requires double-blind pipeline)
+ - 🌐 Service layer: Available via FastAPI + LangChain (background workers and streaming pending)
+ - 🧑‍🔬 Human feedback: UI + APIs implemented; aggregation/reporting jobs still outstanding
 
 ## Long-Term Goals
 

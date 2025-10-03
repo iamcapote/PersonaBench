@@ -1,6 +1,6 @@
 # LangChain Orchestration Service
 
-_Last updated: 2025-09-29_
+_Last updated: 2025-10-02_
 
 ## Goals
 
@@ -26,9 +26,9 @@ graph TD
     Queue[Run Queue (RQ/Celery)]
   end
 
-  API --> LC
-  LC --> Queue
-  Queue --> Harness
+  API --> Queue
+  Queue --> LC
+  LC --> Harness
 
   subgraph Backend Systems
     Harness[PersonaBench Harness]
@@ -46,11 +46,15 @@ graph TD
 
 | Module | Responsibility | Status |
 | --- | --- | --- |
-| `orchestration/chains.py` | Define LangChain `Runnable` graphs for plan→act→react loops, exposing callbacks for logging and metric extraction. | TODO |
-| `orchestration/apis.py` | FastAPI routers for personas, scenarios, evaluations, feedback. | TODO |
-| `orchestration/models.py` | Pydantic models mirroring schema JSON (personas, scenarios, run manifests). | TODO |
-| `orchestration/storage.py` | Abstractions over Postgres/DuckDB + object storage for traces and cached responses. | TODO |
-| `orchestration/auth.py` | API key or OAuth-based auth + role enforcement. | TODO |
+| `orchestration/chains.py` | LangChain `RunnableLambda` with sync, async, and streaming execution of the rollout harness. | ✅ Implemented (streaming and trace capture wired) |
+| `orchestration/routes/` | FastAPI routers for personas, scenarios, games, evaluations, and admin surfaces (queue, audit, feedback). | ✅ Implemented with schema-validated payloads |
+| `orchestration/schemas/` | Pydantic models mirroring persona/scenario summaries, queue entries, and evaluation payloads. | ✅ Implemented |
+| `orchestration/catalog.py` | Disk-backed loaders + writers for personas, scenarios, and games with deterministic caching. | ✅ Implemented |
+| `orchestration/state/` | Lightweight JSONL/JSON persistence for audit trail, evaluation responses, and comparison votes. | ✅ Implemented (next step: swap to durable store) |
+| `orchestration/services/` | Background worker job helpers and in-memory event stream powering SSE updates. | ✅ Implemented |
+| `orchestration/worker.py` | Singleton evaluation worker consuming queue entries and executing LangChain chains. | ✅ Implemented |
+| `orchestration/auth.py` | Header/query admin-key enforcement shared across admin routes. | ✅ Implemented (UI now supplies the key) |
+| `orchestration/analytics.py` | Placeholder for future aggregation and reporting jobs. | 🚧 Planned |
 
 ## Evaluation Flow
 
@@ -60,17 +64,19 @@ graph TD
    - Service validates against `personas/schema.json` and scenario schema.
 
 2. **Run Submission**
-   - Clients POST run manifest to `/api/evaluations` containing persona IDs, scenario IDs, adapter configuration, desired model adapter.
-   - API stores manifest, enqueues job, returns run ID.
+  - Clients POST run manifest to `/api/evaluations` containing persona IDs, scenario IDs, adapter configuration, desired model adapter.
+  - API persists a queue entry and enqueues an `EvaluationJobPayload` on the in-process worker so submission latency stays low.
 
 3. **Execution**
-   - Worker pulls job, instantiates LangChain chain with persona agent and adapter.
-   - Chain executes plan→act→react steps, streaming events via callbacks.
-   - Logs persisted to blob storage (JSONL) and summary metrics to database.
+  - Worker pulls job, instantiates LangChain chain with persona agent and adapter.
+  - Chain executes plan→act→react steps, streaming lifecycle events through the in-memory pub/sub which backs Server-Sent Events.
+  - Logs persisted to JSON-backed storage today (durable store still pending).
 
 4. **Result Retrieval**
-   - Clients GET `/api/evaluations/{id}` to inspect status, metrics, trace URLs.
-   - UI consumes aggregated metrics for comparison dashboards.
+  - Admin APIs expose evaluation responses, audit events, and queue entries from `orchestration/state/` JSON stores.
+  - UI consumes aggregated metrics for comparison dashboards; evaluation queue now supports SSE endpoints for live status updates, which the React queue dashboard listens to for real-time timelines. Operators can now export or copy any run's timeline JSON directly from the dashboard for offline analysis, incident reviews, or quick clipboard sharing, with live event counts, duration badges, auto-scrolling timeline panes, filter toggles (all vs. errors), and a "Jump to latest" control when reviewing historical events.
+  - `/api/evaluations/queue/{id}/events/history` provides a durable event log so operators can reconstruct run timelines even after the SSE stream completes.
+  - Durable storage migration remains on the roadmap.
 
 ## Double-Blind Feedback Integration
 
@@ -86,10 +92,13 @@ graph TD
 - Config via environment variables; avoid hardcoding secrets.
 - Observability: OpenTelemetry tracing, structured logs (`TraceLogger`) forwarded to log aggregation.
 
+## Admin Access
+
+Mutating endpoints (`POST`/`PUT`/`PATCH` under `/api` and `/admin`) enforce an operator key sourced from the `PERSONABENCH_ADMIN_KEY` environment variable. Clients include the secret via the `X-Admin-Key` header or `admin_key` query parameter. The React admin console surfaces a key input in the header and automatically attaches the secret to all authorized requests; when omitted, the UI gracefully falls back to local-only behaviour.
+
 ## Next Steps
 
-1. Add LangChain + FastAPI, Pydantic, Celery dependencies to `pyproject.toml` extras.
-2. Scaffold package `orchestration/` with modules above and unit tests.
-3. Define OpenAPI schema (FastAPI auto-docs) and share with frontend team.
-4. Implement minimal happy-path evaluation chain (single persona + scenario) and integration tests.
-5. Iterate on admin UI to consume new APIs and retire `useKV` storage.
+1. Swap the in-process queue for a durable worker tier (Celery, RQ, or Arq) to guarantee delivery and horizontal scale while preserving SSE updates.
+2. Replace JSON-backed storage in `orchestration/state/` with a structured database (DuckDB or Postgres) and object storage for trace payloads.
+3. Extend streaming beyond the queue: expose SSE or incremental polling endpoints for audit logs and evaluation trace chunks, enabling richer frontend playback.
+4. Harden observability: emit OpenTelemetry spans from the LangChain runner and publish structured logs to the existing `TraceLogger` pipeline.

@@ -21,6 +21,26 @@ const slugifyIdentifier = (value: string, fallback: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "") || fallback
 
+const reorderList = <T,>(items: T[], fromIndex: number, toIndex: number): T[] => {
+  const length = items.length
+  if (length === 0 || fromIndex === toIndex) {
+    return items.slice()
+  }
+  if (fromIndex < 0 || fromIndex >= length) {
+    return items.slice()
+  }
+
+  const result = items.slice()
+  const [moved] = result.splice(fromIndex, 1)
+  if (moved === undefined) {
+    return items.slice()
+  }
+
+  const clamped = Math.max(0, Math.min(toIndex, result.length))
+  result.splice(clamped, 0, moved)
+  return result
+}
+
 export function useScenarioBuilderForm({ scenario, onSave }: ScenarioBuilderProps): ScenarioBuilderHook {
   const [formData, setFormData] = useState<ScenarioBuilderFormState>({
     name: scenario?.name ?? "",
@@ -160,6 +180,25 @@ export function useScenarioBuilderForm({ scenario, onSave }: ScenarioBuilderProp
     }))
   }, [])
 
+  const duplicateSetupStep = useCallback((index: number) => {
+    setFormData((prev) => {
+      const items = prev.setupSteps.slice()
+      const value = items[index] ?? ""
+      items.splice(index + 1, 0, value)
+      return {
+        ...prev,
+        setupSteps: items,
+      }
+    })
+  }, [])
+
+  const reorderSetupSteps = useCallback((fromIndex: number, toIndex: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      setupSteps: reorderList(prev.setupSteps, fromIndex, toIndex),
+    }))
+  }, [])
+
   const updateConstraint = useCallback((index: number, value: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -178,6 +217,25 @@ export function useScenarioBuilderForm({ scenario, onSave }: ScenarioBuilderProp
     setFormData((prev) => ({
       ...prev,
       constraints: prev.constraints.filter((_, i) => i !== index),
+    }))
+  }, [])
+
+  const duplicateConstraint = useCallback((index: number) => {
+    setFormData((prev) => {
+      const items = prev.constraints.slice()
+      const value = items[index] ?? ""
+      items.splice(index + 1, 0, value)
+      return {
+        ...prev,
+        constraints: items,
+      }
+    })
+  }, [])
+
+  const reorderConstraints = useCallback((fromIndex: number, toIndex: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      constraints: reorderList(prev.constraints, fromIndex, toIndex),
     }))
   }, [])
 
@@ -221,6 +279,32 @@ export function useScenarioBuilderForm({ scenario, onSave }: ScenarioBuilderProp
     }))
   }, [])
 
+  const duplicateCriterion = useCallback((index: number) => {
+    setFormData((prev) => {
+      const items = prev.evaluationCriteria.slice()
+      const source = items[index]
+      if (!source) {
+        return prev
+      }
+      const copy: EvaluationCriterion = {
+        ...source,
+        id: `${source.id || "criterion"}-copy-${Date.now()}`,
+      }
+      items.splice(index + 1, 0, copy)
+      return {
+        ...prev,
+        evaluationCriteria: items,
+      }
+    })
+  }, [])
+
+  const reorderCriteria = useCallback((fromIndex: number, toIndex: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      evaluationCriteria: reorderList(prev.evaluationCriteria, fromIndex, toIndex),
+    }))
+  }, [])
+
   const addTag = useCallback(() => {
     const trimmed = newTag.trim()
     if (!trimmed || formData.tags.includes(trimmed)) {
@@ -241,22 +325,33 @@ export function useScenarioBuilderForm({ scenario, onSave }: ScenarioBuilderProp
     }))
   }, [])
 
+  const buildScenarioDraft = useCallback((): ScenarioBuilderFormState => {
+    const trimmedTags = formData.tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0)
+    return {
+      ...formData,
+      name: formData.name.trim(),
+      description: formData.description.trim(),
+      instructions: formData.instructions.trim(),
+      expectedOutputFormat: formData.expectedOutputFormat.trim(),
+      context: formData.context.trim(),
+      setupSteps: cleanedSetupSteps,
+      constraints: cleanedConstraints,
+      evaluationCriteria: cleanedCriteria,
+      tags: trimmedTags,
+    }
+  }, [cleanedConstraints, cleanedCriteria, cleanedSetupSteps, formData])
+
   const handleSubmit = useCallback(
-  (event: FormEvent<HTMLFormElement>) => {
+    (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault()
-      if (!formData.name || !formData.description || !formData.instructions) {
+      const payload = buildScenarioDraft()
+      if (!payload.name || !payload.description || !payload.instructions) {
         return
       }
 
-      const cleanedData: ScenarioBuilderFormState = {
-        ...formData,
-        setupSteps: cleanedSetupSteps,
-        constraints: cleanedConstraints,
-      }
-
-      onSave(cleanedData)
+      onSave(payload)
     },
-    [cleanedConstraints, cleanedSetupSteps, formData, onSave],
+    [buildScenarioDraft, onSave],
   )
 
   return {
@@ -265,6 +360,7 @@ export function useScenarioBuilderForm({ scenario, onSave }: ScenarioBuilderProp
     setNewTag,
     activeTab,
     setActiveTab,
+    buildScenarioDraft,
     handleSubmit,
     cleanedCriteria,
     cleanedConstraints,
@@ -276,12 +372,18 @@ export function useScenarioBuilderForm({ scenario, onSave }: ScenarioBuilderProp
     updateSetupStep,
     addSetupStep,
     removeSetupStep,
+    duplicateSetupStep,
+    reorderSetupSteps,
     updateConstraint,
     addConstraint,
     removeConstraint,
+    duplicateConstraint,
+    reorderConstraints,
     updateCriterion,
     addCriterion,
     removeCriterion,
+    duplicateCriterion,
+    reorderCriteria,
     addTag,
     removeTag,
   }

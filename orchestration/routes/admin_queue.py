@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from ..auth import require_admin
 from ..schemas import (
+    EvaluationQueueCollection,
     EvaluationQueueCreateRequest,
     EvaluationQueueEntry,
     EvaluationQueueUpdateRequest,
 )
-from ..state import enqueue_evaluation, list_queue_entries, update_queue_entry
+from ..state import enqueue_evaluation, list_queue_entries, summarize_queue, update_queue_entry
 
 router = APIRouter(
     prefix="/admin/queue",
@@ -21,12 +22,18 @@ router = APIRouter(
 )
 
 
-@router.get("", response_model=List[EvaluationQueueEntry])
-def read_evaluation_queue(limit: Optional[int] = Query(None, ge=1, le=500)) -> List[EvaluationQueueEntry]:
-    """Return the persisted evaluation queue."""
+@router.get("", response_model=EvaluationQueueCollection)
+def read_evaluation_queue(limit: Optional[int] = Query(None, ge=1, le=500)) -> EvaluationQueueCollection:
+    """Return the persisted evaluation queue along with aggregate metrics."""
 
     entries = list_queue_entries(limit=limit)
-    return [EvaluationQueueEntry.model_validate(entry) for entry in entries]
+    summary_payload = summarize_queue()
+    return EvaluationQueueCollection.model_validate(
+        {
+            "entries": entries,
+            "summary": summary_payload,
+        }
+    )
 
 
 @router.post(

@@ -32,7 +32,7 @@ export type ScenarioDraft = Omit<ScenarioData, "id">
 
 export interface ScenarioBuilderProps {
   scenario?: ScenarioData
-  onSave: (scenario: ScenarioDraft) => void
+  onSave: (scenario: ScenarioDraft) => Promise<void> | void
   onCancel: () => void
 }
 
@@ -44,12 +44,18 @@ export interface ScenarioBuilderFormHandlers {
   updateSetupStep: (index: number, value: string) => void
   addSetupStep: () => void
   removeSetupStep: (index: number) => void
+  duplicateSetupStep: (index: number) => void
+  reorderSetupSteps: (fromIndex: number, toIndex: number) => void
   updateConstraint: (index: number, value: string) => void
   addConstraint: () => void
   removeConstraint: (index: number) => void
+  duplicateConstraint: (index: number) => void
+  reorderConstraints: (fromIndex: number, toIndex: number) => void
   updateCriterion: (index: number, field: keyof EvaluationCriterion, value: unknown) => void
   addCriterion: () => void
   removeCriterion: (index: number) => void
+  duplicateCriterion: (index: number) => void
+  reorderCriteria: (fromIndex: number, toIndex: number) => void
   addTag: () => void
   removeTag: (tag: string) => void
 }
@@ -68,5 +74,6 @@ export interface ScenarioBuilderHook extends ScenarioBuilderFormHandlers, Scenar
   setNewTag: Dispatch<SetStateAction<string>>
   activeTab: string
   setActiveTab: Dispatch<SetStateAction<string>>
+  buildScenarioDraft: () => ScenarioBuilderFormState
   handleSubmit: (event: FormEvent<HTMLFormElement>) => void
 }

@@ -2,29 +2,57 @@
 
 from __future__ import annotations
 
+import time
+
 import pytest
 from fastapi.testclient import TestClient
 
 from orchestration import state
 from orchestration.app import create_app
+from orchestration.services.event_stream import reset_event_stream
+from orchestration.worker import reset_evaluation_worker
+
+
+def _await_queue_completion(entry_id: str, *, timeout: float = 20.0) -> dict[str, object]:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        entry = state.get_queue_entry(entry_id)
+        if entry is None:
+            time.sleep(0.05)
+            continue
+        status = entry.get("status")
+        if status in {"completed", "failed"}:
+            return entry
+        time.sleep(0.05)
+    raise AssertionError(f"Timed out waiting for evaluation '{entry_id}' to complete")
+
+
+def _submit_evaluation(client: TestClient, payload: dict[str, object]) -> dict[str, object]:
+    response = client.post("/api/evaluations", json=payload)
+    assert response.status_code == 202, response.text
+    details = response.json()["details"]
+    entry_id = details["queue_entry_id"]
+    _await_queue_completion(entry_id)
+    return details
 
 
 def test_evaluation_responses_are_persisted_and_queryable(admin_headers) -> None:
+    reset_evaluation_worker()
+    reset_event_stream()
     state.clear_state()
     app = create_app()
     client = TestClient(app)
     client.headers.update(admin_headers)
 
     try:
-        response = client.post(
-            "/api/evaluations",
-            json={
+        _submit_evaluation(
+            client,
+            {
                 "persona": "cooperative_planner",
                 "scenario": "solitaire-practice",
                 "config": {"max_steps": 2},
             },
         )
-        assert response.status_code == 202, response.text
 
         listing = client.get("/api/admin/evaluations/responses")
         assert listing.status_code == 200, listing.text
@@ -69,15 +97,14 @@ def test_evaluation_responses_are_persisted_and_queryable(admin_headers) -> None
         assert empty.status_code == 200, empty.text
         assert empty.json() == []
 
-        second_response = client.post(
-            "/api/evaluations",
-            json={
+        _submit_evaluation(
+            client,
+            {
                 "persona": "ruthless_optimizer",
                 "scenario": "solitaire-practice",
                 "config": {"max_steps": 2},
             },
         )
-        assert second_response.status_code == 202, second_response.text
 
         updated_listing = client.get("/api/admin/evaluations/responses")
         assert updated_listing.status_code == 200, updated_listing.text
@@ -157,6 +184,8 @@ def test_evaluation_responses_are_persisted_and_queryable(admin_headers) -> None
 
 
 def test_evaluation_response_detail_not_found(admin_headers) -> None:
+    reset_evaluation_worker()
+    reset_event_stream()
     state.clear_state()
     app = create_app()
     client = TestClient(app)
@@ -170,21 +199,22 @@ def test_evaluation_response_detail_not_found(admin_headers) -> None:
 
 
 def test_comparison_pair_requires_distinct_responses(admin_headers) -> None:
+    reset_evaluation_worker()
+    reset_event_stream()
     state.clear_state()
     app = create_app()
     client = TestClient(app)
     client.headers.update(admin_headers)
 
     try:
-        first = client.post(
-            "/api/evaluations",
-            json={
+        _submit_evaluation(
+            client,
+            {
                 "persona": "cooperative_planner",
                 "scenario": "solitaire-practice",
                 "config": {"max_steps": 2},
             },
         )
-        assert first.status_code == 202, first.text
 
         pair_attempt = client.post(
             "/api/admin/evaluations/pairs",
@@ -196,6 +226,8 @@ def test_comparison_pair_requires_distinct_responses(admin_headers) -> None:
 
 
 def test_comparison_vote_requires_valid_slot_and_pair(admin_headers) -> None:
+    reset_evaluation_worker()
+    reset_event_stream()
     state.clear_state()
     app = create_app()
     client = TestClient(app)
@@ -209,15 +241,14 @@ def test_comparison_vote_requires_valid_slot_and_pair(admin_headers) -> None:
         assert missing_pair_vote.status_code == 404, missing_pair_vote.text
 
         for persona_name in ("cooperative_planner", "ruthless_optimizer"):
-            response = client.post(
-                "/api/evaluations",
-                json={
+            _submit_evaluation(
+                client,
+                {
                     "persona": persona_name,
                     "scenario": "solitaire-practice",
                     "config": {"max_steps": 2},
                 },
             )
-            assert response.status_code == 202, response.text
 
         pair_attempt = client.post(
             "/api/admin/evaluations/pairs",

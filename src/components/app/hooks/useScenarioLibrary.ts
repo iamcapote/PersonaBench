@@ -6,6 +6,7 @@ import {
 } from "@/lib/appTransformers"
 import type { ScenarioData, ScenarioSummaryResponse } from "@/lib/appTypes"
 import type { UseAuditTrailResult } from "@/components/app/hooks/useAuditTrail"
+import { useAdminAuth } from "@/components/app/providers/AdminAuthProvider"
 
 export interface SaveScenarioPayload {
   scenarioPayload: Omit<ScenarioData, "id" | "kind"> & { name: string; kind?: ScenarioData["kind"] }
@@ -33,6 +34,7 @@ export function useScenarioLibrary({
   recordAuditEvent,
 }: UseScenarioLibraryParams): UseScenarioLibraryResult {
   const [scenarios, setScenariosState] = useState<ScenarioData[]>(initialScenarios)
+  const { authorizedApiFetch, hasAdminAccess } = useAdminAuth()
 
   const setScenarios = useCallback(
     (next: ScenarioData[] | ((current: ScenarioData[]) => ScenarioData[])) => {
@@ -110,10 +112,13 @@ export function useScenarioLibrary({
       const isUpdate = editingScenario?.source === "remote"
 
       try {
+        if (!hasAdminAccess) {
+          throw new Error("Admin key required to create or update scenarios.")
+        }
         const endpoint = isUpdate ? `/api/scenarios/${scenarioId}` : "/api/scenarios"
         const method = isUpdate ? "PUT" : "POST"
 
-        const response = await fetch(endpoint, {
+        const response = await authorizedApiFetch(endpoint, {
           method,
           headers: {
             "Content-Type": "application/json",
@@ -189,7 +194,7 @@ export function useScenarioLibrary({
         throw error instanceof Error ? error : new Error("Failed to save scenario via orchestration service.")
       }
     },
-    [recordAuditEvent]
+    [authorizedApiFetch, hasAdminAccess, recordAuditEvent]
   )
 
   return {

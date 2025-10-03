@@ -3,6 +3,7 @@ import { toast } from "sonner"
 
 import { generateClientId, transformAuditEventResponse } from "@/lib/appTransformers"
 import type { AuditEvent, AuditEventResponse } from "@/lib/appTypes"
+import { useAdminAuth } from "@/components/app/providers/AdminAuthProvider"
 
 const MAX_AUDIT_ENTRIES = 200
 
@@ -17,6 +18,7 @@ export interface UseAuditTrailResult {
 
 export function useAuditTrail(): UseAuditTrailResult {
   const [auditLog, setAuditLogState] = useState<AuditEvent[]>([])
+  const { authorizedApiFetch, hasAdminAccess } = useAdminAuth()
 
   const replaceAuditEvent = useCallback((placeholderId: string, entry: AuditEvent) => {
     setAuditLogState((current) => {
@@ -53,7 +55,12 @@ export function useAuditTrail(): UseAuditTrailResult {
         payload.timestamp = event.timestamp
       }
 
-      fetch("/admin/audit", {
+      if (!hasAdminAccess) {
+        toast("Admin key required to persist audit log events. Recording locally only.")
+        return
+      }
+
+  authorizedApiFetch("/admin/audit", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -75,7 +82,7 @@ export function useAuditTrail(): UseAuditTrailResult {
           toast.error("Unable to persist audit event. Recording locally only.")
         })
     },
-    [replaceAuditEvent]
+  [authorizedApiFetch, hasAdminAccess, replaceAuditEvent]
   )
 
   const setAuditLog = useCallback((events: AuditEvent[]) => {

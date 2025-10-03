@@ -8,9 +8,7 @@ from typing import List
 
 from ...core.api import EnvAdapter
 from ...core.types import Action, Observation, StepResult
-
-
-CARD_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10]
+from ...games.blackjack.utils import card_label, create_deck, hand_value
 
 
 @dataclass
@@ -23,14 +21,15 @@ class BlackjackState:
 
 
 class BlackjackEnv:
-    """Minimal blackjack simulator supporting hit/stand decisions."""
+    """Minimal blackjack simulator supporting hit and stand decisions."""
 
     def __init__(self, seed: int | None = None) -> None:
+        self._seed = seed
         self._rng = random.Random(seed)
         self._state: BlackjackState | None = None
 
     def reset(self) -> BlackjackState:
-        deck = CARD_VALUES * 4
+        deck = create_deck()
         self._rng.shuffle(deck)
         player = [deck.pop(), deck.pop()]
         dealer = [deck.pop(), deck.pop()]
@@ -57,7 +56,7 @@ class BlackjackEnv:
             if hand_value(state.player_hand) > 21:
                 state.done = True
                 state.outcome = "bust"
-        else:  # stand
+        else:
             self._resolve_dealer(state)
 
         return state
@@ -74,15 +73,6 @@ class BlackjackEnv:
             state.outcome = "push"
         else:
             state.outcome = "lose"
-
-
-def hand_value(cards: List[int]) -> int:
-    total = sum(cards)
-    aces = cards.count(1)
-    while aces > 0 and total + 10 <= 21:
-        total += 10
-        aces -= 1
-    return total
 
 
 class BlackjackAdapter(EnvAdapter):
@@ -105,7 +95,7 @@ class BlackjackAdapter(EnvAdapter):
         info = {
             "legal_moves": self._legal_moves(state),
             "player_total": hand_value(state.player_hand),
-            "dealer_upcard": state.dealer_hand[0],
+            "dealer_upcard": card_label(state.dealer_hand[0]),
             "outcome": state.outcome,
         }
         reward = self._reward(state)
@@ -148,14 +138,14 @@ class BlackjackAdapter(EnvAdapter):
 
     @staticmethod
     def _summarize(state: BlackjackState, reveal_dealer: bool) -> str:
-        player_cards = ", ".join(_card_label(card) for card in state.player_hand)
+        player_cards = ", ".join(card_label(card) for card in state.player_hand)
         player_total = hand_value(state.player_hand)
         if reveal_dealer:
-            dealer_cards = ", ".join(_card_label(card) for card in state.dealer_hand)
+            dealer_cards = ", ".join(card_label(card) for card in state.dealer_hand)
             dealer_total = hand_value(state.dealer_hand)
         else:
-            dealer_cards = f"{_card_label(state.dealer_hand[0])}, hidden"
-            dealer_total = _card_label(state.dealer_hand[0])
+            dealer_cards = f"{card_label(state.dealer_hand[0])}, hidden"
+            dealer_total = card_label(state.dealer_hand[0])
 
         lines = [
             "Blackjack Practice Table",
@@ -170,6 +160,4 @@ class BlackjackAdapter(EnvAdapter):
         return "\n".join(lines)
 
 
-def _card_label(card: int) -> str:
-    faces = {1: "Ace", 11: "Jack", 12: "Queen", 13: "King"}
-    return faces.get(card, str(card))
+__all__ = ["BlackjackAdapter", "BlackjackEnv"]

@@ -13,6 +13,7 @@ import { useComparisonPairs } from "@/components/feedback/useComparisonPairs";
 import { ComparisonTargetPicker } from "@/components/feedback/ComparisonTargetPicker";
 import { ComparisonPairViewer } from "@/components/feedback/ComparisonPairViewer";
 import { VoteComposer } from "@/components/feedback/VoteComposer";
+import { useAdminAuth } from "@/components/app/providers/AdminAuthProvider";
 
 interface FeedbackReviewProps {
   scenarios: ScenarioOption[];
@@ -36,6 +37,7 @@ export function FeedbackReview({ scenarios }: FeedbackReviewProps) {
   const [submittingVote, setSubmittingVote] = useState(false);
 
   const { currentPair, loadingPair, error, requestPair, clearPair, setError } = useComparisonPairs();
+  const { authorizedApiFetch, hasAdminAccess } = useAdminAuth();
 
   const activeTargetLabel = useMemo(() => {
     if (!currentPair) {
@@ -112,8 +114,16 @@ export function FeedbackReview({ scenarios }: FeedbackReviewProps) {
     setSubmittingVote(true);
     setError(null);
 
-    try {
-      const response = await fetch(`/admin/evaluations/pairs/${currentPair.id}/votes`, {
+  try {
+      if (!hasAdminAccess) {
+        const message = "Admin key required to submit comparison votes.";
+        setError(message);
+        toast.warning(message);
+        setSubmittingVote(false);
+        return;
+      }
+
+  const response = await authorizedApiFetch(`/admin/evaluations/pairs/${currentPair.id}/votes`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -141,7 +151,17 @@ export function FeedbackReview({ scenarios }: FeedbackReviewProps) {
     } finally {
       setSubmittingVote(false);
     }
-  }, [confidenceInput, currentPair, handleGeneratePair, rationale, reviewerName, selectedWinner, setError]);
+  }, [
+  authorizedApiFetch,
+    confidenceInput,
+    currentPair,
+    handleGeneratePair,
+    hasAdminAccess,
+    rationale,
+    reviewerName,
+    selectedWinner,
+    setError,
+  ]);
 
   const comparisonReady = Boolean(currentPair && currentPair.responses.length === 2);
 

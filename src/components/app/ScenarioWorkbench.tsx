@@ -12,6 +12,7 @@ import type { GameAssetResponseApi, GameAssets, PersonaData, ScenarioData } from
 import type { SaveScenarioPayload, SaveScenarioResult } from "@/components/app/hooks/useScenarioLibrary"
 import { normalizeGameAssetResponse } from "@/lib/appTransformers"
 import { Play, Plus } from "@phosphor-icons/react"
+import { useAdminAuth } from "@/components/app/providers/AdminAuthProvider"
 
 interface ScenarioWorkbenchProps {
   personas: PersonaData[]
@@ -43,6 +44,7 @@ export function ScenarioWorkbench({
   const [gameAssets, setGameAssets] = useState<Record<string, GameAssets>>({})
   const [assetLoading, setAssetLoading] = useState(false)
   const [assetError, setAssetError] = useState<string | null>(null)
+  const { authorizedApiFetch } = useAdminAuth()
 
   const selectedScenarioData = useMemo(
     () => scenarios.find((scenario) => scenario.id === selectedScenario),
@@ -67,9 +69,9 @@ export function ScenarioWorkbench({
       setAssetLoading(true)
       setAssetError(null)
       try {
-        const response = await fetch(`/api/games/${selectedScenarioData.id}/assets`)
+  const response = await authorizedApiFetch(`/games/${selectedScenarioData.id}/assets`)
         if (!response.ok) throw new Error(`Failed to load game assets: ${response.status}`)
-  const payload: GameAssetResponseApi = await response.json()
+        const payload: GameAssetResponseApi = await response.json()
         if (!cancelled) {
           const normalized = normalizeGameAssetResponse(payload)
           setGameAssets((current) => ({ ...current, [selectedScenarioData.id]: normalized }))
@@ -92,7 +94,7 @@ export function ScenarioWorkbench({
     return () => {
       cancelled = true
     }
-  }, [selectedScenarioData, gameAssets])
+  }, [authorizedApiFetch, gameAssets, selectedScenarioData])
 
   const handleEditScenario = (scenarioId: string) => {
     const scenario = scenarios.find((entry) => entry.id === scenarioId)

@@ -58,7 +58,7 @@ See [`leaderboard/submission_spec.md`](leaderboard/submission_spec.md) for submi
 ## Current Status Overview
 
 - **Backend (Python package)**: Provides the core step-loop API, adapters, and metric primitives. A FastAPI orchestration service backed by LangChain exposes `/api/personas`, `/api/scenarios`, `/api/games`, and `/api/evaluations`, while adapters remain lightweight Python shims executed through the `bench/` and `harness/` modules. The runtime now includes a turn-based `GameMaster` and `MatchRunner` capable of coordinating multiple personas against shared game engines (see `bench/core/game_master.py`).
-- **Frontend (React app)**: Lives under `src/`. The UI now hydrates personas and scenarios from the orchestration service (with local fallbacks) but still operates as a prototype without operator/admin consoles or remote scheduling controls. A head-to-head analytics tab visualises persona matchups; surfacing live match traces is still on the roadmap.
+- **Frontend (React app)**: Lives under `src/`. The UI hydrates personas, scenarios, queue state, and audit logs from the orchestration service when a valid admin key is provided via the new header controls. Mutating actions (persona/scenario saves, queue operations, audit votes) now enforce the key and fall back to local-only behaviour when missing. A head-to-head analytics tab visualises persona matchups; surfacing live match traces and replay data is still on the roadmap.
 - **Build + Tests**: `pytest` covers schema validation, metric utilities, and a simple agent smoke test. Frontend code has no automated test coverage.
 
 ### Persona Stat Card Inspiration
@@ -78,11 +78,25 @@ Borrow the structure when designing dashboards: lead with identity, cluster quan
 
 Refer to [`docs/architecture.md`](docs/architecture.md) for a deeper dive into the intended integration between these surfaces and the outstanding work required to bridge them, and [`docs/evaluation_design.md`](docs/evaluation_design.md) for the evaluation/feedback roadmap.
 
+### LangChain Integration
+
+PersonaBench uses LangChain as its orchestration layer, wrapping the plan→act→react harness in `RunnableLambda` primitives that support synchronous, asynchronous, and streaming execution. 
+
+📚 **[Complete LangChain Documentation Index](docs/langchain_index.md)** - Start here for all LangChain resources
+
+#### Quick Links
+
+- **[Quick Start Guide](docs/langchain_quickstart.md)**: Get started in 15 minutes - installation, first evaluation, and common tasks
+- **[Migration Guide](docs/langchain_migration_guide.md)**: Complete architecture overview, design patterns, migration checklist, and troubleshooting guide
+- **[Code Examples](docs/langchain_examples.md)**: Production-ready code examples for adapters, routes, schemas, state management, and background jobs
+- **[LLM Agent Configuration](docs/llm_agent_configuration.md)**: Guide for integrating LLM-backed planning with OpenAI, Ollama, and vLLM
+
 ## Near-Term Priorities
 
 1. **Game master integrations**: Extend the shared `GameMaster` to cover blackjack and poker adapters, surface match metadata in orchestration APIs, and expose structured logs to the UI.
-2. **Operator experience**: Design and implement admin surfaces for persona management, scenario curation, and evaluation scheduling. Document workflow expectations so UI and backend efforts stay aligned.
-3. **Evaluation UX**: Expand comparison dashboards with head-to-head match playback, volatility heatmaps, and double-blind human feedback loops that feed back into scoring pipelines.
-4. **Scenario library expansion**: Broaden Python-native games beyond solitaire and tic-tac-toe, prioritising multiplayer drills that stress negotiation, cooperation, and adversarial risk controls.
+2. **Service orchestration hardening**: Add a background worker for queued evaluations, wire streaming updates into the UI, and persist traces beyond JSONL-on-disk so admin users can review them post-run.
+3. **Operator experience**: Expand the new admin-key-aware interfaces with optimistic updates, error toasts, and batch tooling for personas/scenarios. Document workflow expectations so UI and backend efforts stay aligned.
+4. **Evaluation UX**: Expand comparison dashboards with head-to-head match playback, volatility heatmaps, and double-blind human feedback loops that feed back into scoring pipelines.
+5. **Scenario library expansion**: Broaden Python-native games beyond solitaire and tic-tac-toe, prioritising multiplayer drills that stress negotiation, cooperation, and adversarial risk controls.
 
 Alignment between these streams is tracked in the architecture notes and the living completion plan (`completion_plan.md`).

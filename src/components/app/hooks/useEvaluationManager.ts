@@ -20,6 +20,7 @@ interface EvaluationQueueDependencies {
   mergeQueueEntry: UseEvaluationQueueResult["mergeQueueEntry"]
   createQueueEntryRemote: UseEvaluationQueueResult["createQueueEntryRemote"]
   updateQueueEntryRemote: UseEvaluationQueueResult["updateQueueEntryRemote"]
+  refreshQueue: UseEvaluationQueueResult["refreshQueue"]
 }
 
 interface UseEvaluationManagerParams {
@@ -307,6 +308,10 @@ export function useEvaluationManager({
         }
       }
 
+      queue.refreshQueue().catch(() => {
+        // background refresh failure surfaced via queue state
+      })
+
       setResults((currentResults) => [...currentResults, ...newResults])
 
       setPersonas((currentPersonas) =>
@@ -320,8 +325,8 @@ export function useEvaluationManager({
         })
       )
 
-      setShowEvaluationRunner(false)
-      setActiveTab("results")
+  setShowEvaluationRunner(false)
+  setActiveTab("compare")
       toast.success(`Evaluation complete! ${newResults.length} results saved.`)
     },
     [
@@ -382,6 +387,10 @@ export function useEvaluationManager({
               scenarioId: entry.scenarioId,
             },
           })
+        })
+
+        queue.refreshQueue().catch(() => {
+          // background refresh failure surfaced via queue state
         })
       }
     }
